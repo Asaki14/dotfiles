@@ -1,0 +1,170 @@
+setupVersion: 2
+extensions:
+  - ~/.omp/agent/extensions
+tools:
+  approvalMode: yolo
+modelRoles:
+  tiny: anthropic/claude-haiku-5-5:medium
+  web: web/exa
+  slow: anthropic/claude-opus-5-5:high
+  smol: anthropic/claude-sonnet-5-5:medium
+  advisor: openai-codex/gpt-6.1-sol:medium
+  memory: openai-codex/gpt-6-luna:high
+  task: openai-codex/gpt-6.1-sol:low
+  default: anthropic/claude-opus-5-5:medium
+  widget: openai-codex/gpt-6.1-sol
+cycleOrder:
+  - default
+  - smol
+advisor:
+  enabled: true
+  reviewMode: agent-end
+  reviewInterval: 3
+prewalk:
+  enabled: false
+theme:
+  dark: dark-tokyo-night-status
+  light: light-catppuccin-status
+symbolPreset: nerd
+composer:
+  shape: band
+  tokenRate: false
+statusLine:
+  preset: custom
+  separator: ascii
+  contextLine: embedded
+  transparent: true
+  leftSegments:
+    - pi
+    - model
+    - mode
+    - collab
+    - path
+    - git
+    - pr
+    - token_rate
+    - cache_hit
+    - context_pct
+  rightSegments:
+    - session_name
+  segmentOptions:
+    model:
+      showThinkingLevel: true
+    path:
+      abbreviate: true
+      maxLength: 40
+      stripWorkPrefix: true
+    git:
+      showBranch: true
+      showStaged: true
+      showUnstaged: true
+      showUntracked: true
+  compactThinkingLevel: true
+  showHookStatus: true
+tui:
+  textSizing: false
+  resizeScrollback: rebuild
+  codexResetFireworks: true
+  hyperlinks: auto
+  tight: false
+  imeSafeCursor: true
+personality: none
+extendedContext: true
+compaction:
+  thresholdPercent: 30
+  methodOrder:
+    - handoff
+    - remote
+    - soft
+    - shake
+    - snapcompact
+  handoffSaveToDisk: true
+providers:
+  tinyModelDevice: mlx
+retry:
+  modelFallback: false
+  fallbackChains:
+    web:
+      - web/firecrawl
+      - web/parallel
+      - web/perplexity
+      - google/gemini-2.5-flash
+      - google-antigravity/gemini-2.5-flash
+      - anthropic/claude-haiku-4-5
+      - openai-codex/gpt-5.6-luna
+      - openai-codex/gpt-5.6-sol
+      - xai/grok-4.5
+      - xai-oauth/grok-4.5
+      - web/zai
+      - web/tinyfish
+      - web/jina
+      - web/kagi
+      - web/tavily
+      - web/brave
+      - web/kimi
+      - web/synthetic
+      - web/ollama
+      - web/searxng
+      - web/startpage
+      - web/duckduckgo
+      - web/ecosia
+      - web/google
+      - web/mojeek
+      - web/public
+    task:
+      - anthropic/claude-haiku-5-5:high
+    memory:
+      - anthropic/claude-haiku-5-5:medium
+secrets:
+  enabled: true
+lsp:
+  enabled: false
+bash:
+  patterns:
+    - match: rm -rf /
+      approval: prompt
+    - match: rm -rf ~
+      approval: prompt
+    - match: rm -rf $HOME
+      approval: prompt
+codexResets:
+  autoRedeem: "yes"
+claudeResets:
+  autoRedeem: "no"
+terminal:
+  showProgress: true
+display:
+  cacheMissMarker: true
+  showTokenUsage: false
+  showTurnTime: true
+showHardwareCursor: true
+edit:
+  mode: hashline
+dev:
+  autoqaConsent: denied
+task:
+  showResolvedModelBadge: false
+steeringMode: one-at-a-time
+followUpMode: all
+hideThinkingBlock: false
+memory:
+  backend: mnemopi
+memories:
+  enabled: false
+mnemopi:
+  scoping: per-project-tagged
+  embeddingVariant: multilingual
+  autoRetain: false
+modelPresets:
+  Claude:
+    modelRoles:
+      tiny: anthropic/claude-haiku-5-5:medium
+      web: web/exa
+      slow: anthropic/claude-opus-5-5:high
+      smol: anthropic/claude-sonnet-5-5:high
+      advisor: openai-codex/gpt-6.1-sol:medium
+      memory: openai-codex/gpt-6-luna:high
+      task: anthropic/claude-haiku-5-5:high
+      default: anthropic/claude-opus-5-5:high
+      widget: openai-codex/gpt-6.1-sol
+    defaultThinkingLevel: high

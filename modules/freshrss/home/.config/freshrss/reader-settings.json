@@ -1,0 +1,4 @@
+{
+  "omp_bin": "omp",
+  "model": "openai-codex/gpt-6-luna"
+}

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# ghostty-opacity [value|+N|-N] — 现场调 Ghostty 的 background-opacity 并即时重载。
+#
+# Ghostty 只在启动时读配置、没有文件监听，所以改完要广播 SIGUSR2；这里一台机器一个
+# 窗口一个进程（open -na + quit-after-last-window-closed），必须 pkill 广播而不是发给
+# 单个 pid。不带参数只打印当前值。
+#
+#   ghostty-opacity        # 看当前值
+#   ghostty-opacity 0.74   # 设成 0.74
+#   ghostty-opacity -0.04  # 在当前值上减 0.04（更透）
+#   ghostty-opacity +0.04  # 更实
+set -euo pipefail
+
+# Ghostty 读两处配置，opacity 属于个人那份（omacosy 只往 ~/.config/ghostty 放它自己的
+# 三个键）。走 macOS 的规范路径而不是写死 ~/.config/ghostty-personal：那个路径只是本机
+# 的软链来源。readlink 解到真实文件，否则 sed -i 的写临时文件再改名会把软链替换成普通文件。
+CONFIG="${GHOSTTY_PERSONAL_CONFIG:-$HOME/Library/Application Support/com.mitchellh.ghostty/config}"
+[ -e "$CONFIG" ] && CONFIG="$(readlink -f "$CONFIG")"
+KEY=background-opacity
+[ -w "$CONFIG" ] || { echo "配置不可写: $CONFIG" >&2; exit 1; }
+
+current() { sed -n "s/^${KEY}[[:space:]]*=[[:space:]]*\([0-9.]*\).*/\1/p" "$CONFIG" | head -1; }
+
+CUR="$(current)"
+[ -n "$CUR" ] || { echo "$CONFIG 里没有 ${KEY} 这一行" >&2; exit 1; }
+
+if [ $# -eq 0 ]; then
+  echo "$CUR"
+  exit 0
+fi
+
+ARG="$1"
+case "$ARG" in
+  +*|-*) NEW="$(python3 -c 'import sys; print(f"{min(1.0, max(0.15, float(sys.argv[1]) + float(sys.argv[2]))):.2f}")' "$CUR" "$ARG")" ;;
+  *)     NEW="$(python3 -c 'import sys; print(f"{min(1.0, max(0.15, float(sys.argv[1]))):.2f}")' "$ARG")" ;;
+esac
+
+# 就地改那一行，不碰注释和其他键
+sed -i '' "s/^${KEY}[[:space:]]*=.*/${KEY} = ${NEW}/" "$CONFIG"
+pkill -USR2 -x ghostty 2>/dev/null || true
+echo "$CUR -> $NEW"

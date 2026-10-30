@@ -1,0 +1,8 @@
+{
+  "name": "Local Reader",
+  "author": "asaki",
+  "description": "共享中文译文、本地图片和适配 iPad 的正文排版。",
+  "version": "1.0.0",
+  "entrypoint": "LocalReader",
+  "type": "user"
+}

@@ -1,0 +1,7 @@
+schema = 1
+id = "input-source-policy"
+name = "Input Source Policy"
+version = "0.1.0"
+description = "Selects US Extended for yazi, dooit and rmpc panes, the remembered CJK source for agent panes, and US Extended elsewhere, on focus edges."
+icon = "keyboard"
+window = "window.luau"

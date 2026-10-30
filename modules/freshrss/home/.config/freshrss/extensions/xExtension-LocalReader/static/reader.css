@@ -1,0 +1,79 @@
+.local-reader {
+  max-width: 72ch;
+  margin-inline: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 18px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+.local-reader .local-reader-body,
+.local-reader .local-reader-original {
+  font: inherit;
+}
+.local-reader p { margin-block: 1.1em; }
+.local-reader h2,
+.local-reader h3,
+.local-reader h4 {
+  font-family: inherit;
+  font-weight: 650;
+  line-height: 1.45;
+  margin-block: 1.8em .65em;
+}
+.local-reader h2 { font-size: 1.3em; }
+.local-reader h3 { font-size: 1.15em; }
+.local-reader h4 { font-size: 1em; }
+.local-reader ul,
+.local-reader ol { padding-inline-start: 1.5em; }
+.local-reader li { margin-block: .4em; }
+.local-reader img,
+.local-reader video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.3em auto .5em;
+}
+.local-reader figure { margin: 1.4em 0; }
+.local-reader figcaption {
+  font-size: .85em;
+  line-height: 1.6;
+  opacity: .75;
+  text-align: center;
+}
+.local-reader pre,
+.local-reader .reader-table {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+.local-reader pre { padding: 1em; line-height: 1.6; }
+.local-reader code { font-size: .9em; }
+.local-reader table { border-collapse: collapse; width: 100%; }
+.local-reader th,
+.local-reader td { padding: .5em .7em; text-align: start; }
+.local-reader blockquote { margin-inline: 0; padding-inline: 1em; }
+.local-reader .local-reader-meta,
+.local-reader .local-reader-notice {
+  font-size: 14px;
+  line-height: 1.65;
+  opacity: .8;
+}
+.local-reader-original { margin-top: 2em; }
+.local-reader-original summary {
+  cursor: pointer;
+  padding-block: .7em;
+  font-size: 15px;
+}
+.local-reader-retry {
+  font: inherit;
+  cursor: pointer;
+  padding: .3em .7em;
+  min-height: 44px;
+}
+.local-reader-retry:active,
+.local-reader-original summary:active { transform: translateY(1px); }
+.local-reader-retry:focus-visible,
+.local-reader-original summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .local-reader { font-size: 17px; line-height: 1.85; }
+}

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# omacosy-focus-or-spawn <App> — focus an existing App window, preferring
+# the focused workspace, or open a new window when none exists anywhere.
+set -uo pipefail
+
+APP="${1:-}"
+[ -n "$APP" ] || exit 1
+
+# OmniWM support is intentionally delegated to the existing spawn path.
+wm_is_omniwm() { pgrep -qf "OmniWM.app/Contents/MacOS/OmniWM"; }
+wm_is_omniwm && exec "$HOME/.local/bin/omacosy-spawn" "$APP"
+
+A="$(command -v aerospace || echo /opt/homebrew/bin/aerospace)"
+BUNDLE_ID="$(osascript - "$APP" 2>/dev/null <<'APPLESCRIPT'
+on run argv
+  return id of application (item 1 of argv)
+end run
+APPLESCRIPT
+)" || exit 1
+
+WINS="$("$A" list-windows --monitor all --app-bundle-id "$BUNDLE_ID" \
+  --format '%{window-id} %{workspace}' 2>/dev/null)" || exit 1
+[ -n "$WINS" ] || exec "$HOME/.local/bin/omacosy-spawn" "$APP"
+
+FOCUSED_WS="$("$A" list-workspaces --focused 2>/dev/null)" || exit 1
+first=""
+target=""
+while IFS= read -r window; do
+  id="${window%% *}"
+  workspace="${window#* }"
+  [ -n "$first" ] || first="$id"
+  if [ "$workspace" = "$FOCUSED_WS" ]; then
+    target="$id"
+    break
+  fi
+done <<EOF
+$WINS
+EOF
+
+[ -n "$target" ] || target="$first"
+exec "$A" focus --window-id "$target"

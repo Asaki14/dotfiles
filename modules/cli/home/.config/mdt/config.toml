@@ -1,0 +1,27 @@
+# Reading column: centered, about 40 CJK characters per line like a web article.
+width = 84
+alignment = "center"
+help_menu = false
+heading_style = "bars"
+image_max_height = 32
+
+# Colors are ANSI palette names, so they come from the omacosy theme that
+# Ghostty loads. Picked for osaka-jade; ANSI names do not match the hues there
+# (e.g. "lightyellow" is its gold #e5c736, "lightcyan" its mint #8cd3cb), so
+# revisit these after switching to a theme with a different palette layout.
+h_bg_color = "black"
+h_fg_color = "lightyellow"
+h2_fg_color = "lightyellow"
+# The newsboat reader turns h3+ into bold "◆ title" lines, so bold also
+# colors item titles.
+bold_color = "lightcyan"
+italic_color = "darkgray"
+link_color = "lightmagenta"
+link_selected_bg_color = "black"
+link_selected_fg_color = "lightyellow"
+code_fg_color = "lightred"
+code_bg_color = "reset"
+code_block_bg_color = "reset"
+quote_default = "darkgray"
+table_header_fg_color = "lightyellow"
+scrollbar_color = "darkgray"

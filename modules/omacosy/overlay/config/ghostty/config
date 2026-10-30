@@ -1,0 +1,37 @@
+# Ghostty settings for the omacosy look. Loaded from ~/.config/ghostty
+# (symlinked by install.sh); your personal settings can live in
+# ~/Library/Application Support/com.mitchellh.ghostty/config — Ghostty
+# reads both.
+
+# No titlebar, no traffic lights — the Hyprland look. Close is Super+W,
+# moving is Super+Shift+arrows, so nothing the bar provided is lost.
+macos-titlebar-style = hidden
+
+# Pin the initial size of NEW windows (in cells). Ghostty otherwise
+# inherits the previous window's size, and under a tiling WM that is
+# usually the full screen — so every spawn played its open animation at
+# full size over the whole layout before AeroSpace tiled it. Small and
+# fixed, the pre-tile moment is a brief unobtrusive window instead.
+window-width = 100
+window-height = 30
+
+# ...and because that pinned size is not the tile, the WM resizes every
+# new window the moment it appears. Ghostty's default `after-first`
+# suppresses the size badge only on creation and shows it for any resize
+# AFTER that, so the tiling resize qualified — and so did every re-tile
+# when a sibling window opened or closed. The result was "NNxMM" in the
+# middle of the window for 750 ms, over and over. A compositor never
+# trips this, because it sizes the window before mapping it; an
+# Accessibility-API tiler always does.
+resize-overlay = never
+
+# Every Super+Enter opens a NEW Ghostty instance (`open -na` — one app
+# per window, which is what makes each window a first-class tile).
+# Without this, closing the window leaves its windowless instance
+# running forever: ten stale ghostty processes after a day's work.
+quit-after-last-window-closed = true
+
+# Follows the omacosy theme. Written by bin/ghostty-theme-fragment on every
+# theme-set; a config-file include outranks every top-level key, so this wins
+# over a personal `theme = ...` as well.
+config-file = ?~/.local/state/omacosy/ghostty-theme.conf

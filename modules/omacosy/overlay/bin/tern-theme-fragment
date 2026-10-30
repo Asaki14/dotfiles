@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# tern-theme-fragment [theme-dir] [out] — render the omarchy palette into an omp
+# theme (Tern takes its terminal colours from the theme's `terminal` section:
+# background, foreground and the 16 ANSI colours), then pin it in the running
+# Tern for both appearances, so terminal programs that use plain ANSI colours
+# repaint with the desktop theme.
+# Idempotent, safe to re-run, and a no-op when the palette is unreadable.
+# Set TERN_THEME_NO_RELOAD=1 to skip the switch (used by tests).
+
+set -euo pipefail
+REPO_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+TEMPLATE="$REPO_DIR/config/tern/omp-theme.json.tmpl"
+SRC="${1:-$HOME/.config/omarchy/current/theme}/colors.toml"
+# omp's user theme dir, where Tern resolves theme names
+OUT="${2:-$HOME/.omp/agent/themes/omacosy.json}"
+[ -r "$SRC" ] || exit 0
+
+val() { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\(.*\)\".*/\1/p" "$SRC" | head -1; }
+
+SED_ARGS=()
+for key in accent foreground background selection_background \
+           color0 color1 color2 color3 color4 color5 color6 color7 \
+           color8 color9 color10 color11 color12 color13 color14 color15; do
+  color="$(val "$key")"
+  [[ "$color" =~ ^#[0-9a-fA-F]{6}$ ]] || { echo "invalid theme $key: $color" >&2; exit 1; }
+  SED_ARGS+=(-e "s/@$key@/$color/g")
+done
+
+# UI secondary text needs more contrast than the palette's ANSI bright black.
+# Keep ANSI colours intact; move secondary text three quarters toward the foreground.
+foreground="$(val foreground)"
+muted="$(val color8)"
+readable_muted="#"
+for offset in 1 3 5; do
+  fg_channel=$((16#${foreground:$offset:2}))
+  muted_channel=$((16#${muted:$offset:2}))
+  printf -v channel '%02x' "$(((3 * fg_channel + muted_channel + 2) / 4))"
+  readable_muted+="$channel"
+done
+SED_ARGS+=(-e "s/@readable_muted@/$readable_muted/g")
+
+mkdir -p "$(dirname "$OUT")"
+# write-then-rename, so Tern can never read a half-written file
+sed "${SED_ARGS[@]}" "$TEMPLATE" > "$OUT.tmp"
+if grep -q '@[a-z0-9_]*@' "$OUT.tmp"; then
+  echo "unrendered token in template: $(grep -o '@[a-z0-9_]*@' "$OUT.tmp" | sort -u | tr '\n' ' ')" >&2
+  rm -f "$OUT.tmp"
+  exit 1
+fi
+# omp's readability tuning (tinted success/error tool blocks, thinking fainter
+# than the reply, softened body text, a neutral user block) lives in omp's
+# derive-status-theme.mjs; apply it to the rendered palette in place
+NODE="$(command -v node || echo /opt/homebrew/bin/node)"
+DERIVE="$HOME/.omp/agent/derive-status-theme.mjs"
+if [ -x "$NODE" ] && [ -r "$DERIVE" ]; then
+  "$NODE" "$DERIVE" --file="$OUT.tmp"
+fi
+mv "$OUT.tmp" "$OUT"
+
+# Tern's native omp view does not show the palette as given: it relights the
+# theme's colours and leaves tool names, commands and accents near-black on a
+# dark page. A sheet pinning every palette variable (--sf-p-<role>) to the
+# rendered theme puts the omp colours back.
+CSS="${OUT%.json}.tern.css"
+if [ -x "$NODE" ]; then
+  "$NODE" -e '
+    const fs = require("fs");
+    const theme = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const vars = theme.vars ?? {};
+    const resolve = (v) => (typeof v === "string" && v in vars ? resolve(vars[v]) : v);
+    const roles = { ...theme.colors, ...(theme.export ?? {}) };
+    const lines = Object.entries(roles)
+      .map(([role, value]) => [role, resolve(value)])
+      .filter(([, value]) => /^#[0-9a-fA-F]{6}$/.test(value))
+      .map(([role, value]) => `  --sf-p-${role}: ${value} !important;`);
+    process.stdout.write(`.sf-pal {\n${lines.join("\n")}\n}\n`);
+  ' "$OUT" > "$CSS.tmp"
+  mv "$CSS.tmp" "$CSS"
+fi
+
+[ -n "${TERN_THEME_NO_RELOAD:-}" ] && exit 0
+# hotkey callers (karabiner, aerospace) run outside any Tern pane with a bare
+# PATH; `tern ctl` reaches the window through the session daemon's socket,
+# which a pane would otherwise name in TERN_PANE_SOCKET
+export TERN_PANE_SOCKET="${TERN_PANE_SOCKET:-$HOME/Library/Application Support/Tern/daemon.sock}"
+TERN="$(command -v tern || echo /Applications/Tern.app/Contents/MacOS/tern)"
+[ -x "$TERN" ] && [ -S "$TERN_PANE_SOCKET" ] || exit 0
+# a theme file Tern has not listed yet is ignored (the reply is still ok), so
+# check the pins took and retry while Tern picks the new file up
+for _ in 1 2 3; do
+  for appearance in dark light; do
+    "$TERN" ctl theme "$appearance" omacosy >/dev/null 2>&1 || true
+  done
+  "$TERN" ctl state 2>/dev/null | grep -q '"theme_dark":"omacosy","theme_light":"omacosy"' && break
+  sleep 1
+done
+# `css NAME PATH` replaces the sheet in place, so re-running stays idempotent
+if [ -r "$CSS" ]; then
+  "$TERN" ctl css omacosy-omp "$CSS" >/dev/null 2>&1 || true
+fi

@@ -1,0 +1,425 @@
+#!/usr/bin/env python3
+"""mpd/playlist-sync —— 维护 MPD 歌单正本并补齐缺失歌曲；歌曲文件与 .lrc 不进 git。
+
+歌单正本在本仓库 mpd/playlists/*.m3u（每行一个相对 ~/Music/lib 的路径），随 git 同步。
+~/.local/share/mpd/playlists 是指向它的软链，所以 mpd.conf 的 playlist_directory 不用改、MPD 不用重启。
+
+用法：mpd/playlist-sync [sync|pull|push]
+  sync（默认）  pull + push（仅当歌单有本地提交）+ 补齐缺失歌曲
+  pull          提交本地歌单改动 → fetch origin → 把 origin/main 合进 main（能快进就快进，否则 merge commit）→ 去重
+  push          pull 之后把 main 推到 origin
+每个子命令先确保软链存在。首次运行时如果软链位置还是普通目录，就把里面的 .m3u 并进同名正本
+（Spotify Liked 视为 Liked Songs）：保留正本顺序，本地独有的条目追加在后，去重；
+旧目录改名为 playlists.pre-sync-<日期> 保留，不删除。
+
+git 只提交 mpd/playlists/（显式 pathspec）；不 stash、不 reset、不 rebase、不 force。
+工作区里无关的未提交改动挡住 merge 时直接停下并说明。
+.gitattributes 给 *.m3u 配了 merge=union，本地与 origin 同时加歌时双方的新增都保留，合并后再去重。
+
+补齐缺失：歌单里文件不存在的条目下载成 Opus 到原路径。歌手 = 路径里的歌手目录
+（Singles/<歌手>/<歌名>.opus 或 <歌手>/<专辑>/<NN - 歌名>.opus），歌名 = 文件名去扩展名和开头的曲号。
+YouTube、SoundCloud 各搜 5 条，取第一条时长 > 60 秒（跳过 30 秒试听片段）且身份相符的结果：去掉
+(Official Audio)、MV、- Topic 这类标注后标题里有完全一致的歌名，且歌手出现在上传者或标题里；
+都不相符就记为 no matching result、不落文件，避免同歌手的别的歌顶替。YouTube 遇到 bot 校验带 Chrome cookie 重试。
+下载成功后从 LRCLIB 取时长相差 ≤ 8 秒的滚动歌词，仅在没有同名 .lrc 时写入。
+之后让 MPD 刷新曲库（连不上就跳过）。下载失败只记入汇总，不影响歌单同步。
+
+环境变量（默认即真实路径，测试时改指临时目录）：
+  PLAYLIST_SYNC_REPO   仓库路径，默认 ~/.config
+  PLAYLIST_SYNC_LINK   MPD 的 playlist_directory，默认 ~/.local/share/mpd/playlists
+  PLAYLIST_SYNC_MUSIC  曲库，默认 ~/Music/lib
+  MPD_HOST / MPD_PORT  默认 127.0.0.1 / 6600；MPD_HOST 以 / 或 ~ 开头时视为 unix socket
+"""
+
+import datetime
+import json
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+REPO = Path(os.path.expanduser(os.environ.get("PLAYLIST_SYNC_REPO", "~/.config")))
+LINK = Path(os.path.expanduser(os.environ.get("PLAYLIST_SYNC_LINK", "~/.local/share/mpd/playlists")))
+MUSIC = Path(os.path.expanduser(os.environ.get("PLAYLIST_SYNC_MUSIC", "~/Music/lib")))
+MPD_HOST = os.environ.get("MPD_HOST", "127.0.0.1")
+MPD_PORT = int(os.environ.get("MPD_PORT", "6600"))
+
+PLAYLISTS_REL = "mpd/playlists"
+PLAYLISTS = REPO / PLAYLISTS_REL
+BRANCH = "main"
+ALIASES = {"Spotify Liked": "Liked Songs"}
+MACHINE = Path.home().name
+
+
+class Stop(Exception):
+    pass
+
+
+def git(*args, check=True):
+    r = subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True)
+    if check and r.returncode != 0:
+        raise Stop(f"git {' '.join(args)} 失败：\n{r.stdout}{r.stderr}".rstrip())
+    return r
+
+
+# ---------- 歌单文件 ----------
+
+def read_entries(path):
+    return [l.rstrip("\r\n") for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+
+
+def write_entries(path, entries):
+    path.write_text("".join(e + "\n" for e in entries), encoding="utf-8")
+
+
+def dedup(entries):
+    seen = set()
+    return [e for e in entries if not (e in seen or seen.add(e))]
+
+
+def dedup_tracked():
+    for p in sorted(PLAYLISTS.glob("*.m3u")):
+        entries = read_entries(p)
+        unique = dedup(entries)
+        if unique != entries:
+            write_entries(p, unique)
+            print(f"去重：{p.name} 删掉 {len(entries) - len(unique)} 条重复")
+
+
+def ensure_link():
+    PLAYLISTS.mkdir(parents=True, exist_ok=True)
+    target = PLAYLISTS.resolve()
+    if LINK.is_symlink():
+        if LINK.resolve() == target:
+            return
+        print(f"软链 {LINK} 原指向 {os.readlink(LINK)}，改指 {target}")
+        LINK.unlink()
+    elif LINK.is_dir():
+        migrate()
+    elif LINK.exists():
+        raise Stop(f"{LINK} 既不是目录也不是软链，请手动处理")
+    LINK.parent.mkdir(parents=True, exist_ok=True)
+    LINK.symlink_to(target)
+
+
+def migrate():
+    for local in sorted(LINK.glob("*.m3u")):
+        name = ALIASES.get(local.stem, local.stem)
+        tracked = PLAYLISTS / f"{name}.m3u"
+        base = read_entries(tracked) if tracked.exists() else []
+        merged = dedup(base + read_entries(local))
+        write_entries(tracked, merged)
+        print(f"迁移：{local.name} → {tracked.name}（新增 {len(merged) - len(dedup(base))} 条）")
+    now = datetime.datetime.now()
+    aside = LINK.with_name(f"{LINK.name}.pre-sync-{now:%Y%m%d}")
+    if aside.exists():
+        aside = LINK.with_name(f"{LINK.name}.pre-sync-{now:%Y%m%d-%H%M%S}")
+    LINK.rename(aside)
+    print(f"旧歌单目录已移到 {aside}")
+
+
+# ---------- git ----------
+
+def check_repo():
+    branch = git("symbolic-ref", "--short", "-q", "HEAD", check=False).stdout.strip()
+    if branch != BRANCH:
+        raise Stop(f"{REPO} 当前不在 {BRANCH} 分支（{branch or 'detached HEAD'}），不做同步")
+    if git("rev-parse", "-q", "--verify", "MERGE_HEAD", check=False).returncode == 0:
+        raise Stop(f"{REPO} 有未完成的 merge，先处理完再同步")
+
+
+def commit_playlists(message):
+    git("add", "-A", "--", PLAYLISTS_REL)
+    if git("diff", "--cached", "--quiet", "--", PLAYLISTS_REL, check=False).returncode == 0:
+        return
+    git("commit", "-q", "-m", message, "--", PLAYLISTS_REL)
+    print(f"已提交：{message}")
+
+
+def pull():
+    check_repo()
+    commit_playlists(f"mpd: update playlists on {MACHINE}")
+    git("fetch", "-q", "origin", BRANCH)
+    r = git("merge", "--no-edit", f"origin/{BRANCH}", check=False)
+    if r.returncode != 0:
+        out = (r.stdout + r.stderr).rstrip()
+        if git("rev-parse", "-q", "--verify", "MERGE_HEAD", check=False).returncode == 0:
+            raise Stop(f"合并 origin/{BRANCH} 出现冲突，仓库停在 merge 中间，"
+                       f"请在 {REPO} 手动解决或 git merge --abort：\n{out}")
+        raise Stop(f"合并 origin/{BRANCH} 被工作区里的未提交改动挡住，"
+                   f"这些文件需要先由你提交或挪开再重跑：\n{out}")
+    if "Already up to date" not in r.stdout:
+        print(f"已合并 origin/{BRANCH}")
+    dedup_tracked()
+    commit_playlists("mpd: de-duplicate playlists after merge")
+
+
+def playlists_ahead():
+    r = git("rev-list", "--count", f"origin/{BRANCH}..HEAD", "--", PLAYLISTS_REL)
+    return int(r.stdout.strip()) > 0
+
+
+def push_main():
+    for attempt in range(2):
+        r = git("push", "-q", "origin", BRANCH, check=False)
+        if r.returncode == 0:
+            print(f"已推送 {BRANCH} 到 origin")
+            return
+        if attempt == 0:
+            print("推送被拒（远端刚有新提交），重新 pull 后再推")
+            pull()
+    raise Stop(f"git push origin {BRANCH} 失败：\n{r.stdout}{r.stderr}".rstrip())
+
+
+# ---------- 补齐缺失歌曲 ----------
+
+def artist_title(entry):
+    parts = entry.split("/")
+    artist = parts[1] if parts[0] == "Singles" and len(parts) >= 3 else parts[0]
+    title = re.sub(r"^\d+\s*[-.]\s*", "", Path(parts[-1]).stem)
+    return artist, title
+
+
+def norm(s):
+    return re.sub(r"[\W_]+", "", s.casefold())
+
+
+# 视频标题里与歌曲身份无关的标注，如 (Official Audio)、[Lyric Video]、官方MV
+NOISE_WORDS = {"official", "audio", "video", "music", "lyric", "lyrics", "mv", "m", "v",
+               "visualizer", "hd", "hq", "4k", "remaster", "remastered", "explicit", "full"}
+NOISE_PHRASES = ("官方", "歌词", "歌詞", "版")
+# 出现在结果标题里、却不在歌名里的这些词说明是另一个版本，不算同一首
+VERSION_WORDS = {"remix", "live", "cover", "acoustic", "instrumental", "karaoke", "sped", "slowed",
+                 "nightcore", "reverb", "8d", "tutorial", "reaction", "piano", "mashup", "edit"}
+
+
+def is_noise(text):
+    s = text.casefold()
+    for phrase in NOISE_PHRASES:
+        s = s.replace(phrase, " ")
+    return all(t in NOISE_WORDS for t in re.findall(r"\w+", s))
+
+
+def clean_title(text):
+    def drop(m):
+        inner = m.group(0)[1:-1]
+        return " " if is_noise(inner) or re.match(r"\s*(feat|ft|with)\b", inner, re.I) else m.group(0)
+    return re.sub(r"\([^()]*\)|\[[^\[\]]*\]|【[^【】]*】|（[^（）]*）", drop, text)
+
+
+def strip_trailing_noise(segment):
+    words = segment.split()
+    while len(words) > 1 and is_noise(words[-1]):
+        words.pop()
+    return " ".join(words)
+
+
+def is_match(result, artist, title):
+    """搜索结果的标题与歌名一致，且歌手出现在上传者或标题里，才算同一首歌。"""
+    raw = result.get("title") or ""
+    cleaned = clean_title(raw)
+    pieces = [cleaned, *re.split(r"\s+[-–—/]\s+|\s*[|｜]\s*", cleaned)]
+    pieces += re.findall(r"['‘\"“「『](.+?)['’\"”」』]", cleaned)
+    want = norm(clean_title(title))
+    extra = set(re.findall(r"\w+", raw.casefold())) - set(re.findall(r"\w+", title.casefold()))
+    if extra & VERSION_WORDS or "翻唱" in raw and "翻唱" not in title:
+        return False
+    if not want or want not in {norm(strip_trailing_noise(p)) for p in pieces}:
+        return False
+    uploader = result.get("artist") or result.get("uploader") or result.get("channel") or ""
+    uploader = norm(re.sub(r"\s*-\s*Topic$|VEVO$", "", uploader, flags=re.I))
+    haystack = uploader + "\n" + norm(raw)
+    names = [norm(n) for n in re.split(r",|&|＆|、|\bfeat\.?|\bx\b", artist, flags=re.I)]
+    return any(len(n) >= 2 and n in haystack for n in names) or \
+        (len(uploader) >= 4 and uploader in norm(artist))
+
+
+def is_bot_check(err):
+    return "not a bot" in err or "Sign in to confirm" in err
+
+
+def run_yt_dlp(args, youtube):
+    """YouTube 遇到 bot 校验时带 Chrome cookie 重试一次（macOS 会拦 Chrome 配置读取）。"""
+    def run(extra):
+        try:
+            r = subprocess.run(["yt-dlp", *extra, *args], capture_output=True, text=True, timeout=900)
+        except subprocess.TimeoutExpired:
+            return False, "", "yt-dlp 超时"
+        lines = [l for l in r.stderr.splitlines() if l.strip()]
+        return r.returncode == 0, r.stdout, lines[-1] if lines else f"yt-dlp 退出码 {r.returncode}"
+
+    ok, out, err = run(())
+    if not ok and youtube and is_bot_check(err):
+        ok, out, err = run(("--cookies-from-browser", "chrome"))
+    return ok, out, err
+
+
+def download(artist, title, out_dir):
+    """依次在 YouTube、SoundCloud 搜 5 条，取第一条身份相符且长于 60 秒的结果下载。"""
+    reasons = []
+    for source, prefix in (("YouTube", "ytsearch"), ("SoundCloud", "scsearch")):
+        youtube = prefix == "ytsearch"
+        ok, out, err = run_yt_dlp(["-J", "--flat-playlist", f"{prefix}5:{artist} {title}"], youtube)
+        if not ok:
+            reasons.append(f"{source} 搜索：{err}")
+            continue
+        hit = next((e for e in json.loads(out).get("entries") or []
+                    if (e.get("duration") or 0) > 60 and is_match(e, artist, title)), None)
+        if not hit:
+            reasons.append(f"{source}：no matching result")
+            continue
+        ok, _, err = run_yt_dlp(["-q", "--no-warnings", "--no-playlist",
+                                 "-x", "--audio-format", "opus", "--audio-quality", "0",
+                                 "-o", str(out_dir / "track.%(ext)s"),
+                                 hit.get("webpage_url") or hit["url"]], youtube)
+        path = out_dir / "track.opus"
+        if ok and path.exists():
+            return path, f"{source}「{hit.get('title')}」"
+        reasons.append(f"{source} 下载：{err}")
+    if all(r.endswith("no matching result") for r in reasons):
+        return None, "no matching result"
+    return None, "；".join(reasons)
+
+
+def duration(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                        "-of", "csv=p=0", str(path)], capture_output=True, text=True)
+    return float(r.stdout.strip())
+
+
+def lrclib(endpoint, **params):
+    url = f"https://lrclib.net/api/{endpoint}?{urllib.parse.urlencode(params)}"
+    req = urllib.request.Request(url, headers={"User-Agent": "asaki-dotfiles mpd/playlist-sync"})
+    for wait in (5, 15, None):
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            # LRCLIB 忙时回 503「please retry in a moment」
+            if e.code < 500 or wait is None:
+                raise
+            time.sleep(wait)
+
+
+def fetch_lyrics(artist, title, dur):
+    def ok(item):
+        return bool(item and item.get("syncedLyrics")) and abs((item.get("duration") or 0) - dur) <= 8
+
+    hit = lrclib("get", artist_name=artist, track_name=title, duration=round(dur))
+    if ok(hit):
+        return hit["syncedLyrics"]
+    for item in lrclib("search", artist_name=artist, track_name=title) or []:
+        if ok(item):
+            return item["syncedLyrics"]
+    return None
+
+
+def mpd_update():
+    try:
+        if MPD_HOST.startswith(("/", "~")):
+            sock = socket.socket(socket.AF_UNIX)
+            sock.connect(os.path.expanduser(MPD_HOST))
+        else:
+            sock = socket.create_connection((MPD_HOST, MPD_PORT), timeout=5)
+    except OSError as e:
+        print(f"MPD（{MPD_HOST}:{MPD_PORT}）连不上，跳过曲库刷新：{e}")
+        return
+    with sock, sock.makefile("rw", encoding="utf-8", newline="\n") as f:
+        def cmd(c):
+            f.write(c + "\n")
+            f.flush()
+            lines = []
+            while (line := f.readline().rstrip("\n")) != "OK":
+                if not line or line.startswith("ACK"):
+                    raise Stop(f"MPD 命令 {c} 失败：{line}")
+                lines.append(line)
+            return lines
+
+        sock.settimeout(30)
+        f.readline()  # OK MPD <version>
+        cmd("update")
+        deadline = time.time() + 300
+        while any(l.startswith("updating_db:") for l in cmd("status")):
+            if time.time() > deadline:
+                print("MPD 曲库刷新超过 5 分钟仍未结束，不再等待")
+                return
+            time.sleep(0.5)
+    print("MPD 曲库已刷新")
+
+
+def fill_missing():
+    entries = dedup(e for p in sorted(PLAYLISTS.glob("*.m3u")) for e in read_entries(p))
+    missing = [e for e in entries
+               if not e.startswith("/") and "://" not in e and ".." not in e.split("/")
+               and not (MUSIC / e).exists()]
+    downloaded, lyrics, failed = [], [], []
+    for entry in missing:
+        artist, title = artist_title(entry)
+        dest = MUSIC / entry
+        if dest.suffix != ".opus":
+            failed.append((entry, "不是 .opus 路径，无法按 Opus 下载"))
+            continue
+        print(f"下载：{artist} - {title}")
+        with tempfile.TemporaryDirectory() as tmp:
+            path, info = download(artist, title, Path(tmp))
+            if not path:
+                failed.append((entry, info))
+                continue
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(path), dest)
+        downloaded.append(entry)
+        print(f"  来源 {info} → {dest}")
+        lrc = dest.with_suffix(".lrc")
+        if lrc.exists():
+            continue
+        try:
+            text = fetch_lyrics(artist, title, duration(dest))
+        except (OSError, ValueError) as e:
+            print(f"  歌词获取出错：{e}")
+            continue
+        if text:
+            lrc.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+            lyrics.append(entry)
+            print(f"  歌词 → {lrc}")
+        else:
+            print("  LRCLIB 无时长相符的滚动歌词")
+    if downloaded:
+        mpd_update()
+    print(f"\n汇总：下载 {len(downloaded)} / 新增歌词 {len(lyrics)} / 失败 {len(failed)}")
+    for entry, reason in failed:
+        print(f"  失败 {entry}：{reason}")
+
+
+def main():
+    action = sys.argv[1] if len(sys.argv) > 1 else "sync"
+    if action not in ("sync", "pull", "push"):
+        print(__doc__.split("\n\n")[2], file=sys.stderr)
+        return 2
+    try:
+        if LINK.is_dir() and not LINK.is_symlink():
+            # 先合进 origin 的歌单，迁移时本机独有的条目才排在它们之后
+            pull()
+        ensure_link()
+        pull()
+        if action == "push" or (action == "sync" and playlists_ahead()):
+            push_main()
+        if action == "sync":
+            fill_missing()
+    except Stop as e:
+        print(f"playlist-sync 停止：{e}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

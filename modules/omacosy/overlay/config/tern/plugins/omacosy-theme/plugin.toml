@@ -1,0 +1,7 @@
+schema = 1
+id = "omacosy-theme"
+name = "omacosy theme"
+version = "0.1.0"
+description = "Re-applies the omacosy terminal theme whenever a Tern window starts, so a restart keeps the desktop palette."
+icon = "sparkle"
+window = "window.luau"

@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# omacosy-tab <name> [command] — the Super+Shift jump-to-tab chords: bring
+# the terminal app forward and focus its <name> tab. With a command, a missing
+# tab is created under that name running it; without one, a missing tab just
+# leaves the terminal in front.
+# The terminal is TERMINAL from the apps.conf that install.sh resolves
+# (apps.local.conf applied); Ghostty when it is unset. Tern keeps the tabs
+# itself; any other terminal is expected to run herdr.
+#
+# A label matches <name> when it is <name> itself or starts with `<name> ` (a
+# shell title such as `dooit ~/workspace`).
+# Tern: a tab named <name>, else a tab with a block titled <name> or after the
+# command's program (fish titles a running `rmpc` as `rmpc ~`), else the first
+# tab of a session named <name>.
+# The omp target focuses the first block whose live title contains `OMP:`.
+# herdr: a tab labelled <name>, also as herdr-auto-title's
+# `<position> · <name>[ › …]`, else the first tab of a workspace labelled
+# <name>: an agent tab is titled after the agent (`1 · omp › …`), so only its
+# workspace keeps the name.
+set -uo pipefail
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin"
+
+[ $# -ge 1 ] || { echo "usage: omacosy-tab <name> [command]" >&2; exit 2; }
+name=$1 cmd=${2:-}
+
+# Read only the TERMINAL line: the resolved file is not shell-quoted
+# (BROWSER=Google Chrome), so sourcing it would run a command.
+terminal=$(sed -n 's/^TERMINAL=//p' "$HOME/.config/omacosy/apps.conf" 2>/dev/null | tail -n 1)
+terminal=${terminal:-Ghostty}
+/usr/bin/open -a "$terminal"
+
+tern_tab() {
+  local block
+  block=$(tern ls --json 2>/dev/null | python3 -c '
+import json, sys
+name, program = sys.argv[1], sys.argv[2]
+try:
+    sessions = json.load(sys.stdin)["sessions"]
+except (ValueError, KeyError, TypeError):
+    sessions = []
+def matches(label, word):
+    return bool(word) and isinstance(label, str) and (label == word or label.startswith(word + " "))
+tabs = [t for s in sessions for t in s["tabs"] if t["blocks"]]
+if name == "omp":
+    block = next((b for t in tabs for b in t["blocks"] if "OMP:" in (b["title"] or "")), None)
+    if block:
+        print(block["id"])
+    sys.exit(0)
+tab = (next((t for t in tabs if matches(t["name"], name)), None)
+       or next((t for t in tabs for b in t["blocks"]
+                if matches(b["title"], name) or matches(b["title"], program)), None)
+       or next((t for s in sessions if s["name"] == name for t in s["tabs"] if t["blocks"]), None))
+if tab:
+    print(next((b["id"] for b in tab["blocks"] if b["focused"]), tab["blocks"][0]["id"]))
+' "$name" "${cmd%% *}")
+
+  if [ -n "$block" ]; then
+    tern focus "$block" >/dev/null
+    return
+  fi
+  [ -n "$cmd" ] || return 0
+
+  block=$(tern new tab --cwd "$HOME" --json 2>/dev/null \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["block"])') || return
+  tern rename "$block" "$name" >/dev/null
+  tern focus "$block" >/dev/null
+  tern run "$block" "$cmd" >/dev/null
+}
+
+herdr_tab() {
+  local tab pane
+  tab=$(python3 -c '
+import json, re, sys
+name = sys.argv[1]
+def result(raw, key):
+    try:
+        return json.loads(raw)["result"][key]
+    except (ValueError, KeyError, TypeError):
+        return []
+tabs = result(sys.argv[2], "tabs")
+workspaces = result(sys.argv[3], "workspaces")
+def matches(label):
+    label = re.sub(r"^\d+ · ", "", label)
+    return label == name or label.startswith(name + " ")
+tab = next((t["tab_id"] for t in tabs if matches(t["label"])), "")
+if not tab:
+    ws = next((w["workspace_id"] for w in workspaces if w["label"] == name), "")
+    tab = next((t["tab_id"] for t in tabs if t["workspace_id"] == ws), "")
+print(tab)' "$name" "$(herdr tab list 2>/dev/null)" "$(herdr workspace list 2>/dev/null)")
+
+  if [ -n "$tab" ]; then
+    herdr tab focus "$tab" >/dev/null
+    return
+  fi
+  [ -n "$cmd" ] || return 0
+
+  pane=$(herdr tab create --label "$name" --focus 2>/dev/null | python3 -c '
+import json, sys
+r = json.load(sys.stdin)["result"]
+p = r.get("root_pane")
+print(p if isinstance(p, str) else p.get("pane_id", ""))')
+  [ -n "$pane" ] && herdr pane run "$pane" "$cmd" >/dev/null
+}
+
+case $terminal in
+  Tern) tern_tab ;;
+  *) herdr_tab ;;
+esac

@@ -1,0 +1,19 @@
+[[mgr.prepend_keymap]]
+on   = [ "<Enter>" ]
+run  = "plugin smart-enter"
+desc = "Enter a directory or open a file"
+
+[[mgr.prepend_keymap]]
+on   = [ "e" ]
+run  = "open --hovered"
+desc = "Edit the hovered file in Neovim"
+
+[[mgr.prepend_keymap]]
+on  = [ "c", "p" ]
+run  = "shell 'echo -n \"$@\" | pbcopy' --confirm"
+desc = "Copy absolute path to clipboard"
+
+[[mgr.prepend_keymap]]
+on   = [ "c", "a" ]
+run  = "plugin compress"
+desc = "Compress selected files"
