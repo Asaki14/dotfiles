@@ -31,6 +31,6 @@
 
 ## 配置
 
-安装器在 `~/.local/share/omacosy` 检出上游 `59b52024a016bfe0993a880c4b455cfe4eb064ed`，覆盖 [overlay](overlay/)，按 [overlay/.deleted](overlay/.deleted) 删除文件，执行上游 `install.sh`，最后链接 [home](home/)。已有 checkout 也会执行这些操作，请自行保存本地修改。上游安装器会修改 macOS defaults、安装 LaunchAgents、编译辅助程序并设置壁纸，还会更改其他桌面配置。文件备份不能撤销这些系统更改，使用前请检查 overlay 中的安装脚本。上游许可证：[MIT](https://github.com/paulsp94/omacosy/blob/59b52024a016bfe0993a880c4b455cfe4eb064ed/LICENSE)。
+安装器在 `~/.local/share/omacosy` 检出上游 `59b52024a016bfe0993a880c4b455cfe4eb064ed`，覆盖 [overlay](overlay/)，按 [overlay/.deleted](overlay/.deleted) 删除文件，执行上游 `install.sh`，最后链接 [home](home/)。如果 `~/.local/share/omacosy` 已存在且不是本安装器创建的，会先整体移入备份目录；本安装器创建的 checkout 重跑时会重置到固定版本。上游安装器会修改 macOS defaults、安装 LaunchAgents、编译辅助程序并设置壁纸，还会更改其他桌面配置。文件备份不能撤销这些系统更改，使用前请检查 overlay 中的安装脚本。上游许可证：[MIT](https://github.com/paulsp94/omacosy/blob/59b52024a016bfe0993a880c4b455cfe4eb064ed/LICENSE)。
 
 在天气进程的环境中设置 `OMACOSY_WEATHER_LOCATION`、`OMACOSY_WEATHER_LAT` 与 `OMACOSY_WEATHER_LON`。如果应用由 launchd 启动，只改 Shell 配置不够，需要在对应 LaunchAgent 的环境中设置。请检查 `bar-items.conf`、应用快捷键与 Karabiner 映射。Caps Lock 按住是 Super，单击是 Escape。AI 用量需要 CodexBar 与已登录账户，音乐集成需要 music 模块。
