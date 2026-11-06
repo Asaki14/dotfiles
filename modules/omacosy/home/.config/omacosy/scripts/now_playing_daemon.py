@@ -11,6 +11,7 @@ Output: an atomic JSON file consumed by omacosy-bar.
 import json
 import os
 import socket
+import threading
 import time
 from urllib.parse import urlencode
 from urllib.request import urlopen, Request
@@ -18,7 +19,9 @@ from urllib.request import urlopen, Request
 LRCLIB_GET = "https://lrclib.net/api/get?"
 LRCLIB_SEARCH = "https://lrclib.net/api/search?"
 LYRIC_OFFSET = float(os.environ.get("LYRIC_OFFSET", "0.0"))
-POLL_INTERVAL = float(os.environ.get("MPD_POLL_INTERVAL", "1.0"))
+POLL_INTERVAL = float(os.environ.get("MPD_POLL_INTERVAL", "0.25"))
+# the bar drops a line older than 10 s; a long line must keep re-stamping
+HEARTBEAT = 3.0
 MPD_SOCKET = os.path.expanduser(os.environ.get("MPD_SOCKET", "~/.local/share/mpd/socket"))
 MUSIC_DIR = os.path.expanduser(os.environ.get("MPD_MUSIC_DIR", "~/Music/lib"))
 LRC_WRITE = os.environ.get("LYRIC_LRC_WRITE", "1") != "0"
@@ -30,6 +33,7 @@ track = None
 sampled_at = 0.0
 last_poll = 0.0
 last_label = None
+last_write = 0.0
 
 
 def write_output(label):
@@ -215,11 +219,21 @@ def poll_mpd(force=False):
     key = (fresh["file"], fresh["name"], fresh["artist"], fresh["duration"])
     if key != last_key:
         last_key = key
-        lyrics = load_lyrics(fresh)
+        # drop the previous track's lines now; the fetch may take seconds
+        # and must not stall the tick or leave the old lyric on screen
+        lyrics = []
+        threading.Thread(target=load_for, args=(key, fresh), daemon=True).start()
+
+
+def load_for(key, t):
+    global lyrics
+    rows = load_lyrics(t)
+    if key == last_key:
+        lyrics = rows
 
 
 def update_bar():
-    global last_label
+    global last_label, last_write
 
     poll_mpd()
 
@@ -233,9 +247,10 @@ def update_bar():
     else:
         label = ("hidden", "", "")
 
-    if label == last_label:
+    if label == last_label and time.monotonic() - last_write < HEARTBEAT:
         return
     last_label = label
+    last_write = time.monotonic()
     write_output(label)
 
 
@@ -247,6 +262,6 @@ if __name__ == "__main__":
             update_bar()
         except Exception:
             pass
-        time.sleep(0.2)
+        time.sleep(0.05)
 
 
