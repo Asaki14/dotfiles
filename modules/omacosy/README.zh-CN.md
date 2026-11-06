@@ -42,3 +42,5 @@ osaka-jade 的壁纸轮换包含 [xrce/dots 的 Diane 原图](https://github.com
 Fishing Funds 弹窗按固定列排版：基金名、近 20 个交易日净值曲线、涨跌幅、盈亏，顶部为合计行。曲线和数值来自 `bar-items.conf` 中 `fission-estimator` 指定的外部脚本（不在本仓库）。该脚本须在每个 `displayRows` 项输出 `rate`、`profit`、`spark`（净值序列），并在顶层输出 `totalSpark`；缺失时数值显示短横线，不画曲线。
 
 overlay 由维护者的私有 omacosy fork 导出；发布前会把个人主机名、地点替换为中性值。
+
+壁纸图片因体积不在此发布，fork 中保存在 `themes/*/backgrounds/`。请自行把图片放入该目录，否则主题壁纸轮换没有可用图片。
