@@ -37,4 +37,6 @@ osaka-jade 的壁纸轮换包含 [xrce/dots 的 Diane 原图](https://github.com
 
 在天气进程的环境中设置 `OMACOSY_WEATHER_LOCATION`、`OMACOSY_WEATHER_LAT` 与 `OMACOSY_WEATHER_LON`。如果应用由 launchd 启动，只改 Shell 配置不够，需要在对应 LaunchAgent 的环境中设置。请检查 `bar-items.conf`、应用快捷键与 Karabiner 映射。Caps Lock 按住是 Super，单击是 Escape。AI 用量需要 CodexBar 与已登录账户，音乐集成需要 music 模块。
 
+`bar-items.conf` 中的 `proxy-speed on` 在 Fishing Funds 左侧显示固定宽度的双行网速：上行上传、下行下载，箭头弱化，等宽数字右对齐。两行均显示整数 KB/s（1 KB = 1,000 字节），不切换为 B/s 或 MB/s。菜单栏每两秒读取 mihomo `/connections` 累计量，每次从 Clash Verge Rev 本地 `config.yaml` 重新读取 `external-controller` 和 `secret`；仓库不保存凭据。控制器不可用时显示两行灰色短横线。改为 `proxy-speed off` 或删除该指令，再运行 `launchctl kickstart -k "gui/$(id -u)/com.omacosy.bar"` 即可关闭。
+
 Fishing Funds 弹窗按固定列排版：基金名、近 20 个交易日净值曲线、涨跌幅、盈亏，顶部为合计行。曲线和数值来自 `bar-items.conf` 中 `fission-estimator` 指定的外部脚本（不在本仓库）。该脚本须在每个 `displayRows` 项输出 `rate`、`profit`、`spark`（净值序列），并在顶层输出 `totalSpark`；缺失时数值显示短横线，不画曲线。
