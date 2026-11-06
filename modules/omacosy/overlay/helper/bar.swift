@@ -5087,7 +5087,7 @@ func aiCachedUsage(_ provider: String) -> [String: Any]? {
 
 func aiPillLabel(_ usage: [String: Any]?) -> String {
     let windows = usage.map(aiWindows) ?? []
-    let values = windows.filter { $0.name == "5h" || $0.name == "7d" }
+    let values = windows.filter { $0.name == "5h" }
         .map { "\($0.name) \($0.pct)%" }
     return values.isEmpty ? "—" : values.joined(separator: "  ")
 }
