@@ -1,0 +1,59 @@
+[
+  {
+    "source": "oauth",
+    "version": "0.140.0",
+    "usage": {
+      "secondary": {
+        "resetDescription": "Sep 15 at 12:01 PM",
+        "usedPercent": 0,
+        "resetsAt": "2026-09-15T04:01:17Z",
+        "windowMinutes": 10080
+      },
+      "identity": {
+        "providerID": "codex",
+        "accountEmail": "<redacted>",
+        "loginMethod": "self_serve_business_prolite"
+      },
+      "tertiary": null,
+      "updatedAt": "2026-09-08T04:02:18Z",
+      "codexResetCredits": {
+        "credits": [
+          {
+            "reset_type": "codex_rate_limits",
+            "expires_at": "2026-09-21T00:03:18Z",
+            "description": "感谢使用 Codex！你已获赠一次免费的速率限制重置机会。",
+            "granted_at": "2026-08-22T00:03:18Z",
+            "title": "完全重置",
+            "status": "available",
+            "id": "<redacted>"
+          },
+          {
+            "reset_type": "codex_rate_limits",
+            "expires_at": "2026-10-04T02:22:38Z",
+            "description": "感谢使用 Codex！你已获赠一次免费的速率限制重置机会。",
+            "granted_at": "2026-09-04T02:22:38Z",
+            "title": "完全重置",
+            "status": "available",
+            "id": "<redacted>"
+          },
+          {
+            "reset_type": "codex_rate_limits",
+            "expires_at": "2026-10-04T22:08:04Z",
+            "description": "感谢使用 Codex！你已获赠一次免费的速率限制重置机会。",
+            "granted_at": "2026-09-04T22:08:04Z",
+            "title": "完全重置",
+            "status": "available",
+            "id": "<redacted>"
+          }
+        ],
+        "availableCount": 3,
+        "updatedAt": "2026-09-08T04:02:18Z"
+      },
+      "primary": null,
+      "dataConfidence": "exact",
+      "accountEmail": "<redacted>",
+      "loginMethod": "self_serve_business_prolite"
+    },
+    "provider": "codex"
+  }
+]

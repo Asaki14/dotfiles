@@ -22,7 +22,7 @@ Run from the repository root. Homebrew packages: `git`, `fzf`, `eza`, `zoxide`, 
 | [`home/.config/omacosy/ffm-ignore`](home/.config/omacosy/ffm-ignore) | `~/.config/omacosy/ffm-ignore` |
 | [`home/.config/omacosy/gesture.json`](home/.config/omacosy/gesture.json) | `~/.config/omacosy/gesture.json` |
 | [`home/.config/omacosy/scripts/ai_usage_popup.sh`](home/.config/omacosy/scripts/ai_usage_popup.sh) | `~/.config/omacosy/scripts/ai_usage_popup.sh` |
-| [`home/.config/omacosy/scripts/codexbar_omp.sh`](home/.config/omacosy/scripts/codexbar_omp.sh) | `~/.config/omacosy/scripts/codexbar_omp.sh` |
+| [`home/.config/omacosy/scripts/omp_usage.py`](home/.config/omacosy/scripts/omp_usage.py) | `~/.config/omacosy/scripts/omp_usage.py` |
 | [`home/.config/omacosy/scripts/now_playing_daemon.py`](home/.config/omacosy/scripts/now_playing_daemon.py) | `~/.config/omacosy/scripts/now_playing_daemon.py` |
 | [`home/.config/omacosy/scripts/weather_lib.py`](home/.config/omacosy/scripts/weather_lib.py) | `~/.config/omacosy/scripts/weather_lib.py` |
 | [`home/.config/omacosy/scripts/weather_popup.sh`](home/.config/omacosy/scripts/weather_popup.sh) | `~/.config/omacosy/scripts/weather_popup.sh` |
@@ -40,3 +40,5 @@ Set `OMACOSY_WEATHER_LOCATION`, `OMACOSY_WEATHER_LAT` and `OMACOSY_WEATHER_LON` 
 `proxy-speed on` in `bar-items.conf` enables a fixed-width, two-line speed cell immediately left of Fishing Funds: upload above download, with dim arrows and right-aligned monospaced digits. Both lines show integer KB/s (1 KB = 1,000 bytes), never B/s or MB/s. The bar samples mihomo `/connections` totals every two seconds and reads `external-controller` and `secret` from Clash Verge Rev's local `config.yaml` at each sample; credentials are never stored here. Unavailable controllers show two muted dashes. Set `proxy-speed off` or remove the directive, then reload with `launchctl kickstart -k "gui/$(id -u)/com.omacosy.bar"` to disable it.
 
 The Fishing Funds popup lays each fund on a fixed grid: name, 20-trading-day NAV curve, rate, profit, with a portfolio total row on top. The curve and figures come from the external estimator named by `fission-estimator` in `bar-items.conf` (not in this repository). It must print `rate`, `profit` and `spark` (NAV series) per `displayRows` entry and a top-level `totalSpark`; without them rows show an em dash in place of the figures and no curve.
+
+The overlay is exported from the maintainer's private omacosy fork; personal hostnames and locations are replaced with neutral values before publishing.

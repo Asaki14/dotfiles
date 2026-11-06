@@ -8,7 +8,7 @@
 # itself; any other terminal is expected to run herdr.
 #
 # A label matches <name> when it is <name> itself or starts with `<name> ` (a
-# shell title such as `dooit ~/workspace`).
+# shell title such as `dooit ~/project`).
 # Tern: a tab named <name>, else a tab with a block titled <name> or after the
 # command's program (fish titles a running `rmpc` as `rmpc ~`), else the first
 # tab of a session named <name>.
@@ -23,9 +23,10 @@ export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin"
 [ $# -ge 1 ] || { echo "usage: omacosy-tab <name> [command]" >&2; exit 2; }
 name=$1 cmd=${2:-}
 
-# Read only the TERMINAL line: the resolved file is not shell-quoted
-# (BROWSER=Google Chrome), so sourcing it would run a command.
-terminal=$(sed -n 's/^TERMINAL=//p' "$HOME/.config/omacosy/apps.conf" 2>/dev/null | tail -n 1)
+# Read only the TERMINAL line rather than sourcing the file. install.sh
+# now writes the values double-quoted; older installs left them bare
+# (BROWSER=Google Chrome), so both spellings are accepted.
+terminal=$(sed -n 's/^TERMINAL="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$HOME/.config/omacosy/apps.conf" 2>/dev/null | tail -n 1)
 terminal=${terminal:-Ghostty}
 /usr/bin/open -a "$terminal"
 

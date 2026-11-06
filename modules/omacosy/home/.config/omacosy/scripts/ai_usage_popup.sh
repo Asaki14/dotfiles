@@ -1,6 +1,6 @@
 #!/bin/bash
 # ai_usage_popup.sh - AI usage rows for OMacOSy.
-# Reads codexbar's cached JSON and prints the TSV consumed by omacosy-bar.
+# Reads the bar's cached usage JSON and prints the TSV consumed by omacosy-bar.
 
 CLAUDE_ROWS=3
 CODEX_ROWS=2
