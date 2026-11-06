@@ -602,7 +602,7 @@ struct BarItem: Equatable {
 
 // screen order, left to right
 let rightLayout = configuredRightLayout(
-    ["weather", "fission", "wifi", "bluetooth", "brightness", "volume", "battery", "airpods",
+    ["weather", "proxy-speed", "fission", "wifi", "bluetooth", "brightness", "volume", "battery", "airpods",
      "caffeinate", "clock", "activity"])
 let rightOrder = rightLayout.order
 let rightGroups = rightLayout.groups
@@ -1302,6 +1302,23 @@ struct TrendDay {
     var span: Double { spanHigh - spanLow }
 }
 
+// One Fishing Funds line on a fixed column grid: name, trend curve, rate, profit.
+// `total` is the portfolio row — bold, no name column of its own.
+struct FundLine {
+    var name = ""
+    var rate: Double?
+    var profit = 0.0
+    var spark: [Double] = []
+    var total = false
+}
+
+let fundNameWidth: CGFloat = 168
+let fundSparkWidth: CGFloat = 96
+let fundRateWidth: CGFloat = 62
+let fundProfitWidth: CGFloat = 64
+let fundColumnGap: CGFloat = 12
+let fundLineWidth = fundNameWidth + fundSparkWidth + fundRateWidth + fundProfitWidth + fundColumnGap * 3
+
 struct PopupRow {
     var icon = ""
     var image: NSImage? // 16pt leading icon — Recent Items entries
@@ -1339,6 +1356,7 @@ struct PopupRow {
     // icon/text pair: they own their internal layout
     var card: WeatherCard?
     var trend: TrendDay?
+    var fund: FundLine?
 }
 
 let rowHeight: CGFloat = 26
@@ -1406,6 +1424,7 @@ final class PopupView: NSView {
         if row.rule { return 11 }
         if row.card != nil { return weatherCardHeight }
         if row.trend != nil { return weatherTrendHeight }
+        if row.fund != nil { return 28 }
         // a week strip is taller than a text row: the calendar is the panel's
         // left half now, and a cramped grid was the main thing that made the
         // old single column look like a list rather than a month
@@ -1459,6 +1478,10 @@ final class PopupView: NSView {
             if row.rule { continue }
             if row.card != nil || row.trend != nil {
                 width = max(width, weatherColumnWidth)
+                continue
+            }
+            if row.fund != nil {
+                width = max(width, fundLineWidth + 8)
                 continue
             }
             if let cells = row.cells {
@@ -1551,6 +1574,10 @@ final class PopupView: NSView {
                 drawTrend(trend, in: rect)
                 continue
             }
+            if let fund = row.fund {
+                drawFund(fund, in: rect)
+                continue
+            }
             if let cells = row.cells {
                 drawWeek(cells, in: rect, row: row)
                 continue
@@ -1622,6 +1649,66 @@ final class PopupView: NSView {
         drawText(card.desc, nerdFont("Bold", 13), palette.accent, leftAt: x, midY: rect.maxY - 63)
         drawText(card.detail, nerdFont("Regular", 11.5), palette.muted,
                  leftAt: x, midY: rect.minY + 17)
+    }
+
+    // name | curve | rate | profit on fixed columns; numbers right-aligned so
+    // every digit column lines up. Curve is min–max scaled per row and tinted
+    // by whether the window ended above where it started.
+    func drawFund(_ line: FundLine, in rect: NSRect) {
+        let numFont = nerdFont(line.total ? "Bold" : "Regular", 12.5)
+        let tone: NSColor
+        switch line.rate {
+        case .some(let r) where r > 0.005: tone = palette.green
+        case .some(let r) where r < -0.005: tone = palette.red
+        default: tone = palette.muted
+        }
+        var x = rect.minX + 4
+        let nameFont = nerdFont(line.total ? "Bold" : "Regular", 13)
+        var name = line.name
+        while name.count > 1 && advance(name, nameFont) > fundNameWidth - 4 { name.removeLast() }
+        if name != line.name { name += "\u{2026}" }
+        drawText(name, nameFont, line.total ? palette.accent : palette.label, leftAt: x, midY: rect.midY)
+        x += fundNameWidth + fundColumnGap
+
+        if line.spark.count >= 2, let lo = line.spark.min(), let hi = line.spark.max() {
+            let box = NSRect(x: x, y: rect.minY + 6, width: fundSparkWidth, height: rect.height - 12)
+            let span = hi - lo
+            let pts = line.spark.enumerated().map { i, v -> NSPoint in
+                let t = span > 0 ? CGFloat((v - lo) / span) : 0.5
+                return NSPoint(x: box.minX + box.width * CGFloat(i) / CGFloat(line.spark.count - 1),
+                               y: box.minY + box.height * t)
+            }
+            let rising = line.spark.last! >= line.spark.first!
+            let ink = rising ? palette.green : palette.red
+            let area = NSBezierPath()
+            area.move(to: NSPoint(x: pts[0].x, y: box.minY))
+            pts.forEach { area.line(to: $0) }
+            area.line(to: NSPoint(x: pts.last!.x, y: box.minY))
+            area.close()
+            ink.withAlphaComponent(0.14).setFill()
+            area.fill()
+            let path = NSBezierPath()
+            path.move(to: pts[0])
+            pts.dropFirst().forEach { path.line(to: $0) }
+            path.lineWidth = 1.3
+            path.lineJoinStyle = .round
+            ink.setStroke()
+            path.stroke()
+            let end = pts.last!
+            ink.setFill()
+            NSBezierPath(ovalIn: NSRect(x: end.x - 2, y: end.y - 2, width: 4, height: 4)).fill()
+        } else {
+            drawText("\u{2014}", numFont, palette.muted, leftAt: x + fundSparkWidth / 2 - 4, midY: rect.midY)
+        }
+        x += fundSparkWidth + fundColumnGap
+
+        let rateText = line.rate.map { String(format: "%+.2f%%", $0) } ?? "\u{2014}"
+        drawText(rateText, numFont, tone,
+                 leftAt: x + fundRateWidth - advance(rateText, numFont), midY: rect.midY)
+        x += fundRateWidth + fundColumnGap
+        let profitText = line.rate == nil ? "\u{2014}" : String(format: "%+.2f", line.profit)
+        drawText(profitText, numFont, tone,
+                 leftAt: x + fundProfitWidth - advance(profitText, numFont), midY: rect.midY)
     }
 
     // One forecast day: name, its glyph, then the bar that is the point of
@@ -3168,7 +3255,8 @@ final class BarView: NSView {
                 name: name, item: item,
                 iconInk: hasIcon ? inkBox(item.icon, iconFont).width : 0,
                 innerGap: hasIcon && hasLabel ? 7 : 0,
-                labelAdv: hasLabel ? advance(item.label, labelFont) : 0)
+                labelAdv: name == "proxy-speed" ? proxySpeedWidth
+                    : (hasLabel ? advance(item.label, labelFont) : 0))
             // only a run that is still adjacent HERE may share a background:
             // the loader guarantees it, and this keeps a stale group from
             // stretching a rect across an item that sits between its members
@@ -3203,7 +3291,9 @@ final class BarView: NSView {
                              centeredIn: NSRect(x: contentX, y: pill.minY,
                                                 width: member.iconInk, height: pill.height))
                 }
-                if member.labelAdv > 0 {
+                if member.name == "proxy-speed" {
+                    drawProxySpeed(member.item, x: contentX, midY: pill.midY)
+                } else if member.labelAdv > 0 {
                     drawText(member.item.label, labelFont, palette.label,
                              leftAt: contentX + member.iconInk + member.innerGap, midY: pill.midY)
                 }
@@ -4196,6 +4286,7 @@ scheduleClock()
 
 Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { _ in updateWeather() }
 Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { _ in updateFissionFund() }
+Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in updateProxySpeed() }
 // same 1800 s cadence bar_daemon.sh:147 used for Open-Meteo
 Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { _ in updateOpenMeteoWeather() }
 // codexbar walks the network with a 20 s timeout, so the fetch keeps the
@@ -4301,7 +4392,7 @@ func configuredRightLayout(_ upstream: [String])
         // they do not report themselves as unknown
         case "fission-estimator", "weather-script", "weather-lib",
              "ai-usage-script", "codexbar", "workspaces-max", "airpods-name",
-             "caffeinate", "lyrics-daemon", "lyrics-out", "media-source", "mpd-socket":
+             "caffeinate", "lyrics-daemon", "lyrics-out", "media-source", "mpd-socket", "proxy-speed":
             break
         case "media-controls":
             // only `off` turns them off; anything else keeps upstream behaviour
@@ -4375,6 +4466,102 @@ func groupIndexByItem(_ groups: [[String]]) -> [String: Int] {
     return map
 }
 
+// --- mihomo proxy throughput ----------------------------------------------
+// Read credentials on every sample: Clash can rotate them without a bar restart.
+var proxySpeedBusy = false
+var proxySpeedPrevious: (endpoint: String, up: Double, down: Double, time: TimeInterval)?
+let proxySpeedSession: URLSession = {
+    let config = URLSessionConfiguration.ephemeral
+    config.connectionProxyDictionary = [:]
+    config.timeoutIntervalForRequest = 2
+    config.timeoutIntervalForResource = 3
+    return URLSession(configuration: config)
+}()
+
+func proxySpeedController() -> (URL, String)? {
+    let path = NSHomeDirectory() + "/Library/Application Support/io.github.clash-verge-rev.clash-verge-rev/config.yaml"
+    guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return nil }
+    var values: [String: String] = [:]
+    for line in text.components(separatedBy: .newlines) {
+        guard !line.hasPrefix(" "), !line.hasPrefix("\t"),
+              let colon = line.firstIndex(of: ":") else { continue }
+        let key = String(line[..<colon])
+        guard key == "external-controller" || key == "secret" else { continue }
+        var value = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+        if value.hasPrefix("\"") {
+            guard let data = ("[" + value + "]").data(using: .utf8),
+                  let array = try? JSONSerialization.jsonObject(with: data) as? [String],
+                  let decoded = array.first else { return nil }
+            value = decoded
+        } else if value.hasPrefix("'"), value.hasSuffix("'") {
+            value = String(value.dropFirst().dropLast()).replacingOccurrences(of: "''", with: "'")
+        } else {
+            value = value.components(separatedBy: " #")[0].trimmingCharacters(in: .whitespaces)
+        }
+        values[key] = value
+    }
+    guard var address = values["external-controller"], !address.isEmpty else { return nil }
+    if address.hasPrefix("0.0.0.0:") { address = "127.0.0.1:" + address.dropFirst(8) }
+    if address.hasPrefix("[::]:") { address = "[::1]:" + address.dropFirst(5) }
+    guard let url = URL(string: "http://" + address + "/connections"),
+          url.host != nil else { return nil }
+    return (url, values["secret"] ?? "")
+}
+
+let proxySpeedFont = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .medium)
+// Seven digits cover even multi-gigabit links without moving neighbouring pills.
+let proxySpeedWidth: CGFloat = 12 + advance("0000000 KB/s", proxySpeedFont)
+
+func proxySpeedRate(_ bytes: Double) -> String {
+    String(format: "%.0f KB/s", bytes / 1_000)
+}
+
+func drawProxySpeed(_ item: BarItem, x: CGFloat, midY: CGFloat) {
+    let values = item.label.components(separatedBy: "\n")
+    for (index, arrow) in ["↑", "↓"].enumerated() {
+        let y = midY + (index == 0 ? 5.5 : -5.5)
+        let value = values.indices.contains(index) ? values[index] : "—"
+        drawText(arrow, proxySpeedFont, palette.muted, leftAt: x, midY: y)
+        drawText(value, proxySpeedFont, value == "—" ? palette.muted : palette.label,
+                 leftAt: x + proxySpeedWidth - advance(value, proxySpeedFont), midY: y)
+    }
+}
+
+func updateProxySpeed() {
+    guard configuredValue("proxy-speed") == "on", !proxySpeedBusy else { return }
+    func offline() {
+        proxySpeedPrevious = nil
+        set("proxy-speed") { $0.label = "—\n—"; $0.iconColor = palette.muted }
+    }
+    guard let (url, secret) = proxySpeedController() else { offline(); return }
+    if rightItems["proxy-speed"] == nil { offline() }
+    proxySpeedBusy = true
+    var request = URLRequest(url: url)
+    request.setValue("Bearer " + secret, forHTTPHeaderField: "Authorization")
+    proxySpeedSession.dataTask(with: request) { data, response, error in
+        let object = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        let up = (object?["uploadTotal"] as? NSNumber)?.doubleValue
+        let down = (object?["downloadTotal"] as? NSNumber)?.doubleValue
+        let ok = error == nil && (response as? HTTPURLResponse)?.statusCode == 200
+        let now = ProcessInfo.processInfo.systemUptime
+        DispatchQueue.main.async {
+            proxySpeedBusy = false
+            guard ok, let up, let down, up.isFinite, down.isFinite else { offline(); return }
+            let previous = proxySpeedPrevious
+            proxySpeedPrevious = (url.absoluteString, up, down, now)
+            guard let previous, previous.endpoint == url.absoluteString,
+                  now > previous.time, up >= previous.up, down >= previous.down else {
+                set("proxy-speed") { $0.label = "0 KB/s\n0 KB/s"; $0.iconColor = palette.label }
+                return
+            }
+            let elapsed = now - previous.time
+            let label = proxySpeedRate((up - previous.up) / elapsed) + "\n"
+                + proxySpeedRate((down - previous.down) / elapsed)
+            set("proxy-speed") { $0.label = label; $0.iconColor = palette.label }
+        }
+    }.resume()
+}
+
 // --- fission_fund (Fishing Funds) ------------------------------------------
 // stays untouched: `node <script>` prints one JSON object to stdout and that
 // object already carries everything the pill and the popup need. Swift owns
@@ -4386,7 +4573,8 @@ struct FissionFund {
     var color = "flat"
     var summary = ""
     var summaryIcon = ""
-    var rows: [(name: String, label: String)] = []
+    var rows: [FundLine] = []
+    var total: FundLine?
 }
 
 var fissionFund: FissionFund?
@@ -4444,8 +4632,16 @@ func fissionParse(_ o: [String: Any]) -> FissionFund {
     // full set it falls back to
     let raw = (o["displayRows"] as? [[String: Any]]) ?? (o["rows"] as? [[String: Any]]) ?? []
     f.rows = raw.prefix(16).compactMap {
-        guard let name = $0["name"] as? String, let label = $0["label"] as? String else { return nil }
-        return (name, label)
+        guard let name = $0["name"] as? String else { return nil }
+        return FundLine(name: name,
+                        rate: ($0["rate"] as? NSNumber)?.doubleValue,
+                        profit: ($0["profit"] as? NSNumber)?.doubleValue ?? 0,
+                        spark: ($0["spark"] as? [NSNumber] ?? []).map(\.doubleValue))
+    }
+    if ok, let rate = (o["totalRate"] as? NSNumber)?.doubleValue,
+       let profit = (o["totalProfit"] as? NSNumber)?.doubleValue {
+        f.total = FundLine(name: "\u{5408}\u{8BA1}", rate: rate, profit: profit,
+                           spark: (o["totalSpark"] as? [NSNumber] ?? []).map(\.doubleValue), total: true)
     }
     return f
 }
@@ -4467,10 +4663,17 @@ func applyFission(_ f: FissionFund) {
 
 func fissionRows() -> [PopupRow] {
     guard let f = fissionFund else { return [] }
-    var rows: [PopupRow] = [PopupRow(icon: "", text: "Fishing Funds", hero: true)]
-    let summary = [f.summaryIcon, f.summary].filter { !$0.isEmpty }.joined(separator: "  ")
-    if !summary.isEmpty { rows.append(PopupRow(text: summary, dim: true)) }
-    for row in f.rows { rows.append(PopupRow(text: "\(row.name)  \(row.label)")) }
+    // the summary time rides the title row's right edge instead of a loose
+    // second line, so the figures below own the grid
+    var rows: [PopupRow] = [PopupRow(icon: "", text: "Fishing Funds",
+                                     detail: f.summaryIcon, hero: true)]
+    if let total = f.total {
+        var r = PopupRow(); r.fund = total; rows.append(r)
+        rows.append(PopupRow(rule: true))
+    } else if !f.summary.isEmpty {
+        rows.append(PopupRow(text: f.summary, dim: true))
+    }
+    for line in f.rows { var r = PopupRow(); r.fund = line; rows.append(r) }
     return rows
 }
 
@@ -5772,6 +5975,7 @@ updateBrightness()
 updateWifi()
 updateWeather()
 updateFissionFund()
+updateProxySpeed()
 updateOpenMeteoWeather()
 updateAIUsage()
 updateAirPods()
