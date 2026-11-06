@@ -4,7 +4,7 @@
             "complex_modifications": {
                 "rules": [
                     {
-                        "description": "Caps Lock -> Super (cmd+ctrl+alt) when held; Escape when tapped alone",
+                        "description": "Caps Lock -> Super (cmd+ctrl+alt) when held",
                         "manipulators": [
                             {
                                 "from": {
@@ -22,11 +22,6 @@
                                             "left_control",
                                             "left_option"
                                         ]
-                                    }
-                                ],
-                                "to_if_alone": [
-                                    {
-                                        "key_code": "escape"
                                     }
                                 ],
                                 "type": "basic"
