@@ -4301,10 +4301,11 @@ Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in renderCaffeinat
 Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
     if openPopup == "ai" { aiRenderRows() }
 }
-// the lyric file changes only when the daemon's line does; one stat per second
+// the lyric file changes only when the daemon's line does; one stat per 0.1 s
 // is the cheapest way to never miss an os.replace (a descriptor watch sees the
-// first rename and then holds a dead inode)
-Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in lyricPoll() }
+// first rename and then holds a dead inode) and keeps the line within 0.1 s of
+// the daemon's tick
+Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in lyricPoll() }
 
 // ===== omacosy extras (fork) begin =====
 
@@ -5766,9 +5767,12 @@ func lyricPoll() {
     hold.text = obj["text"] as? String ?? ""
     hold.state = obj["state"] as? String ?? ""
     hold.ts = obj["ts"] as? Double ?? Date().timeIntervalSince1970
+    let changed = hold.text != lyricHold.text || hold.state != lyricHold.state || hold.track != lyricHold.track
     lyricHold = hold
     if mediaSourceMPD { mediaFromDaemon(obj) }
     lyricSeenTitle = model.media.title
+    // the daemon re-stamps an unchanged line every few seconds; only a change is worth a log line or a repaint
+    guard changed else { return }
     tlog("lyrics: state=\(hold.state) track=\(hold.track) text=\(hold.text)")
     repaint()
 }
