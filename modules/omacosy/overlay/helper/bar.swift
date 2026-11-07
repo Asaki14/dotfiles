@@ -5436,30 +5436,45 @@ func aiWindowRows(_ usage: [String: Any]?, brand: String, head: String, slot: St
     return rows
 }
 
+// Saved reset credits that are usable now, as one "重置机会" row after the
+// window rows. `key` is the usage field omp_usage.py fills per provider.
+func aiResetRow(_ usage: [String: Any], rows: [AIRow], key: String, type: String,
+                slot: String, now: Date) -> AIRow? {
+    let credits = (usage[key] as? [String: Any])?["credits"] as? [[String: Any]] ?? []
+    let available = credits.filter {
+        ($0["reset_type"] as? String) == type && ($0["status"] as? String) == "available"
+    }
+    guard !available.isEmpty else { return nil }
+    let count = available.reduce(0) { $0 + max(1, ($1["remaining_count"] as? Int) ?? 1) }
+    var text = "\(count) 次可用"
+    let formatter = ISO8601DateFormatter()
+    let expiries = available.compactMap { credit -> Date? in
+        guard let stamp = credit["expires_at"] as? String else { return nil }
+        return formatter.date(from: stamp)
+    }
+    if let expiry = expiries.min() {
+        text += " · 最近到期 \(aiRemaining(expiry, now: now))"
+    }
+    return AIRow(target: "\(slot).\(rows.count)", iconColor: "MUTED",
+                 labelColor: "TEXT", left: "重置机会", right: text)
+}
+
 func aiClaudeRows(_ usage: [String: Any]?, now: Date = Date()) -> [AIRow] {
-    aiWindowRows(usage, brand: "Claude", head: "title", slot: "c", now: now)
+    var rows = aiWindowRows(usage, brand: "Claude", head: "title", slot: "c", now: now)
+    guard let usage, rows.count > 1 else { return rows }
+    if let row = aiResetRow(usage, rows: rows, key: "claudeResetCredits",
+                            type: "claude_rate_limits", slot: "c", now: now) {
+        rows.append(row)
+    }
+    return rows
 }
 
 func aiCodexRows(_ usage: [String: Any]?, now: Date = Date()) -> [AIRow] {
     var rows = aiWindowRows(usage, brand: "Codex", head: "head2", slot: "x", now: now)
     guard let usage, rows.count > 1 else { return rows }
-    let resetCredits = (usage["codexResetCredits"] as? [String: Any])?["credits"] as? [[String: Any]] ?? []
-    let availableResets = resetCredits.filter {
-        ($0["reset_type"] as? String) == "codex_rate_limits"
-            && ($0["status"] as? String) == "available"
-    }
-    if !availableResets.isEmpty {
-        var text = "\(availableResets.count) 次可用"
-        let formatter = ISO8601DateFormatter()
-        let expiries = availableResets.compactMap { credit -> Date? in
-            guard let stamp = credit["expires_at"] as? String else { return nil }
-            return formatter.date(from: stamp)
-        }
-        if let expiry = expiries.min() {
-            text += " · 最近到期 \(aiRemaining(expiry, now: now))"
-        }
-        rows.append(AIRow(target: "x.\(rows.count)", iconColor: "MUTED",
-                          labelColor: "TEXT", left: "重置机会", right: text))
+    if let row = aiResetRow(usage, rows: rows, key: "codexResetCredits",
+                            type: "codex_rate_limits", slot: "x", now: now) {
+        rows.append(row)
     }
     return rows
 }

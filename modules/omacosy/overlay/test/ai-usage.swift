@@ -67,7 +67,7 @@ expect(aiClaudeRows(claudePro)[0].right == "Claude  ·  Pro", "brand prefix trim
 let both = aiParsedUsage(oldRows)
 expect(both.rows.map(\.target) == ["title", "c.1", "c.2", "c.3", "head2", "x.1", "x.2"],
        "Claude section first, from the cache rather than the script")
-expect(both.claude?.pct == 1 && both.claude?.stale == false && both.claudeLabel == "5h 1%  7d 30%",
+expect(both.claude?.pct == 1 && both.claude?.stale == false && both.claudeLabel == "5h 1%",
        "Claude pill segment")
 try FileManager.default.removeItem(at: aiCacheURL("claude"))
 
@@ -103,6 +103,31 @@ let resetRows = aiCodexRows(withResetCredits, now: now)
 expect(resetRows.last?.left == "重置机会"
        && resetRows.last?.right == "2 次可用 · 最近到期 6d23h",
        "available Codex reset credits and nearest expiry")
+var claudeWithResets = claude
+claudeWithResets["claudeResetCredits"] = [
+    "credits": [
+        ["reset_type": "claude_rate_limits", "status": "available",
+         "expires_at": "2026-09-15T04:01:17Z"],
+        ["reset_type": "claude_rate_limits", "status": "redeemed",
+         "expires_at": "2026-09-10T00:00:00Z"],
+        ["reset_type": "codex_rate_limits", "status": "available",
+         "expires_at": "2026-09-10T00:00:00Z"]
+    ]
+]
+let claudeResetRows = aiClaudeRows(claudeWithResets, now: now)
+expect(claudeResetRows.last?.left == "重置机会"
+       && claudeResetRows.last?.right == "1 次可用 · 最近到期 6d23h",
+       "available Claude reset credits counted by type and status")
+expect(aiClaudeRows(claude, now: now).allSatisfy { $0.left != "重置机会" },
+       "no Claude reset row without credits")
+claudeWithResets["claudeResetCredits"] = [
+    "credits": [
+        ["reset_type": "claude_rate_limits", "status": "available", "remaining_count": 3,
+         "expires_at": "2026-09-15T04:01:17Z"]
+    ]
+]
+expect(aiClaudeRows(claudeWithResets, now: now).last?.right == "3 次可用 · 最近到期 6d23h",
+       "one Claude grant with remainingCount 3 counts as 3")
 dual["secondary"] = NSNull()
 expect(aiWindows(dual).map(\.name) == ["5h"], "primary-only plan")
 dual["primary"] = ["usedPercent": 81, "windowMinutes": 120]

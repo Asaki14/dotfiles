@@ -19,7 +19,7 @@ def parser_source(source):
     names = ["struct AIRow {", "struct AIUsage {", "struct AIWindow {",
              "func aiCacheURL(", "func aiWindows(", "func aiCachedUsage(",
              "func aiPrimary(", "func aiRemaining(", "func aiWindowRows(",
-             "func aiClaudeRows(", "func aiCodexRows(", "func aiPillLabel(",
+             "func aiResetRow(", "func aiClaudeRows(", "func aiCodexRows(", "func aiPillLabel(",
              "func aiParsedUsage("]
     return "import Foundation\nimport CoreFoundation\n" + "".join(
         declaration(source, name) for name in names)

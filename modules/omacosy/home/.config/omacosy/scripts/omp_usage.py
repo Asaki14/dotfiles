@@ -19,6 +19,9 @@ import time
 DB = os.path.expanduser("~/.omp/agent/agent.db")
 PROVIDERS = {"claude": "anthropic", "codex": "openai-codex"}
 SLOTS = {"5h": "primary", "7d": "secondary"}
+# provider -> (usage field, credit reset_type) read by the bar's aiResetRow
+RESET_CREDITS = {"anthropic": ("claudeResetCredits", "claude_rate_limits"),
+                 "openai-codex": ("codexResetCredits", "codex_rate_limits")}
 STALE_AFTER = 900  # seconds; matches the bar's own dim threshold
 
 
@@ -90,9 +93,11 @@ def usage(provider, report):
     if plan:
         result["loginMethod"] = plan
     credits = (report.get("resetCredits") or {}).get("credits") or []
-    if provider == "openai-codex" and credits:
-        result["codexResetCredits"] = {"credits": [
-            {"reset_type": "codex_rate_limits", "status": c.get("status"),
+    tag = RESET_CREDITS.get(provider)
+    if tag and credits:
+        result[tag[0]] = {"credits": [
+            {"reset_type": tag[1], "status": c.get("status"),
+             "remaining_count": c.get("remainingCount") or 1,
              "expires_at": iso_text(c.get("expiresAt"))}
             for c in credits]}
     return result
