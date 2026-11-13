@@ -4763,7 +4763,7 @@ func groupIndexByItem(_ groups: [[String]]) -> [String: Int] {
 // --- mihomo proxy throughput ----------------------------------------------
 // Read credentials on every sample: Clash can rotate them without a bar restart.
 var proxySpeedBusy = false
-var proxySpeedPrevious: (endpoint: String, up: Double, down: Double, time: TimeInterval)?
+var proxySpeedPrevious: (endpoint: String, connections: [String: (up: Double, down: Double)], time: TimeInterval)?
 let proxySpeedSession: URLSession = {
     let config = URLSessionConfiguration.ephemeral
     config.connectionProxyDictionary = [:]
@@ -4834,23 +4834,36 @@ func updateProxySpeed() {
     request.setValue("Bearer " + secret, forHTTPHeaderField: "Authorization")
     proxySpeedSession.dataTask(with: request) { data, response, error in
         let object = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
-        let up = (object?["uploadTotal"] as? NSNumber)?.doubleValue
-        let down = (object?["downloadTotal"] as? NSNumber)?.doubleValue
-        let ok = error == nil && (response as? HTTPURLResponse)?.statusCode == 200
+        let list = object?["connections"] as? [[String: Any]]
+        let ok = error == nil && (response as? HTTPURLResponse)?.statusCode == 200 && list != nil
         let now = ProcessInfo.processInfo.systemUptime
+        // Only connections leaving through a proxy node: DIRECT/REJECT are not proxy traffic.
+        var current: [String: (up: Double, down: Double)] = [:]
+        for conn in list ?? [] {
+            let chains = conn["chains"] as? [String] ?? []
+            guard let first = chains.first, first != "DIRECT", first != "REJECT",
+                  let id = conn["id"] as? String else { continue }
+            current[id] = ((conn["upload"] as? NSNumber)?.doubleValue ?? 0,
+                           (conn["download"] as? NSNumber)?.doubleValue ?? 0)
+        }
         DispatchQueue.main.async {
             proxySpeedBusy = false
-            guard ok, let up, let down, up.isFinite, down.isFinite else { offline(); return }
+            guard ok else { offline(); return }
             let previous = proxySpeedPrevious
-            proxySpeedPrevious = (url.absoluteString, up, down, now)
-            guard let previous, previous.endpoint == url.absoluteString,
-                  now > previous.time, up >= previous.up, down >= previous.down else {
+            proxySpeedPrevious = (url.absoluteString, current, now)
+            guard let previous, previous.endpoint == url.absoluteString, now > previous.time else {
                 set("proxy-speed") { $0.label = "0 KB/s\n0 KB/s"; $0.iconColor = \.label }
                 return
             }
+            // Connections closed between samples drop out; their last interval is not counted.
+            var up = 0.0, down = 0.0
+            for (id, now) in current {
+                let before = previous.connections[id] ?? (0, 0)
+                up += max(0, now.up - before.up)
+                down += max(0, now.down - before.down)
+            }
             let elapsed = now - previous.time
-            let label = proxySpeedRate((up - previous.up) / elapsed) + "\n"
-                + proxySpeedRate((down - previous.down) / elapsed)
+            let label = proxySpeedRate(up / elapsed) + "\n" + proxySpeedRate(down / elapsed)
             set("proxy-speed") { $0.label = label; $0.iconColor = \.label }
         }
     }.resume()
