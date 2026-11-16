@@ -301,6 +301,11 @@ next theme switch, which resets the bar to the theme's `layout`.
 | `studio` | a bottom strip with AI, lyrics, net speed and fund | those four |
 | `zen` | a left capsule with workspaces, AI, status and clock | the whole top bar |
 
+The `studio` bottom strip sits flush with the screen's bottom edge.
+Workspace indicators settle in 0.14 seconds. Bar animations follow the display's
+refresh cadence; continuous content keeps its own lower update rate, and the
+refresh callback stops when the bar is idle.
+
 Layouts rewrite the window manager's outer gaps at runtime (`[gaps]` in
 `~/.config/aerospace/aerospace.toml`, `[gaps.outer]` under OmniWM) so tiled
 windows stay clear of a bottom strip or side capsule, and take the top edge

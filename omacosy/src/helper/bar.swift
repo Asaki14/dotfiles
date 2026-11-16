@@ -33,6 +33,7 @@ import CoreWLAN
 import IOBluetooth
 import IOKit.ps
 import SystemConfiguration
+import QuartzCore
 import UniformTypeIdentifiers
 
 // DisplayServices (private) — the same calls Control Center makes, and
@@ -417,11 +418,13 @@ func drawPillBG(_ rect: NSRect) {
 // where that value is NOW on its way there. A changed target starts a short
 // ease from wherever the value was, so nothing jumps; the first sight of a key
 // is drawn in place, so a launch does not animate in from zero. Frames are
-// driven only while something moves (or an alert pulses) and the timer stops
-// itself the moment the bar is still: a resting bar costs nothing.
+// driven by the display refresh only while something moves (or an alert
+// pulses); a resting bar schedules no frames.
 func easeOutCubic(_ t: CGFloat) -> CGFloat { 1 - pow(1 - t, 3) }
 
-final class Motion {
+let workspaceIndicatorDuration: TimeInterval = 0.14
+
+final class Motion: NSObject {
     private struct Track {
         var from: CGFloat, to: CGFloat
         var start: TimeInterval, duration: TimeInterval
@@ -429,7 +432,7 @@ final class Motion {
     private var tracks: [String: Track] = [:]
     private var tokens: [String: (token: String, previous: String, start: TimeInterval)] = [:]
     private var live: [String: (seen: TimeInterval, fps: Double)] = [:]
-    private var timer: Timer?
+    private var displayLink: CADisplayLink?
     private var lastFrame: TimeInterval = 0
 
     var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
@@ -518,24 +521,30 @@ final class Motion {
     }
 
     private func kick() {
-        guard timer == nil else { return }
-        let t = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in self?.tick() }
-        RunLoop.main.add(t, forMode: .common)
-        timer = t
+        guard displayLink == nil, let screen = NSScreen.main else { return }
+        let link = screen.displayLink(target: self, selector: #selector(tick(_:)))
+        let fps = Float(screen.maximumFramesPerSecond)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: min(30, fps),
+                                                       maximum: fps, preferred: fps)
+        link.add(to: .main, forMode: .common)
+        displayLink = link
     }
 
-    private func tick() {
+    @objc private func tick(_ link: CADisplayLink) {
         let t0 = now
         live = live.filter { t0 - $0.value.seen < 0.5 }
         let moving = easing(t0)
         guard moving || !live.isEmpty else {
-            timer?.invalidate()
-            timer = nil
+            link.invalidate()
+            displayLink = nil
+            repaint() // Commit the exact destination after the last moving frame.
             return
         }
-        // only live keys asking: their own (lower) rate is enough
-        let fps = moving ? 60 : (live.values.map(\.fps).max() ?? 24)
-        guard t0 - lastFrame >= 1 / fps - 0.002 else { return }
+        // Content on its own clock keeps its lower rate between transitions.
+        if !moving {
+            let fps = live.values.map(\.fps).max() ?? 24
+            guard t0 - lastFrame >= 1 / fps - 0.002 else { return }
+        }
         lastFrame = t0
         repaint()
     }
@@ -735,7 +744,7 @@ let gapQueue = DispatchQueue(label: "omacosy.gaps", qos: .userInitiated)
 
 func applyWMGaps() {
     let bottom = activeLayout.bottom.isEmpty ? baseOuterGap
-        : Int(bottomStripHeight + stripMargin * 2) + 2
+        : Int(bottomStripHeight + stripMargin * (activeLayout.name == "studio" ? 1 : 2)) + 2
     let left = activeLayout.side.isEmpty ? baseOuterGap
         : Int(sideCapsuleWidth + stripMargin * 2) + 2
     let noTop = activeLayout.noTop
@@ -3778,7 +3787,8 @@ final class BarView: NSView {
         // bar: docked, it never matched there and the laptop had no "you
         // are here" at all.
         if let index = shown.firstIndex(of: surface.visible) {
-            let fx = motion.value("focus.\(sid)", start + CGFloat(index) * step + chipPad)
+            let fx = motion.value("focus.\(sid)", start + CGFloat(index) * step + chipPad,
+                                  duration: workspaceIndicatorDuration)
             let pill = NSRect(x: fx, y: (barHeight - chipPillHeight) / 2,
                               width: chipBox, height: chipPillHeight)
             switch barStyle.focus {
@@ -4565,7 +4575,7 @@ final class AuxView: NSView {
         let box: CGFloat = 22
         if let index = shown.firstIndex(of: owner.visible) {
             let y = motion.value("side.focus.\(sid)", rect.maxY - CGFloat(index + 1) * sideStep
-                                     + (sideStep - box) / 2)
+                                     + (sideStep - box) / 2, duration: workspaceIndicatorDuration)
             let mark = NSRect(x: bounds.midX - box / 2, y: y, width: box, height: box)
             switch barStyle.focus {
             case .underline:
@@ -4701,13 +4711,14 @@ final class AuxSurface {
         let usable = owner.screen.visibleFrame
         switch kind {
         case .bottom:
-            // as wide as its modules, centred in the room left by the side
-            // capsule (when up), and above a visible Dock
+            // As wide as its modules, centred beside the side capsule.
+            // Studio sits flush with the screen; other layouts clear the Dock.
             let left = activeLayout.side.isEmpty ? stripMargin : sideCapsuleWidth + stripMargin * 2
             let room = screen.width - left - stripMargin
             let width = min(room, bottomStripWidth())
             return NSRect(x: (screen.minX + left + (room - width) / 2).rounded(),
-                          y: max(screen.minY, usable.minY) + stripMargin,
+                          y: activeLayout.name == "studio" ? screen.minY
+                              : max(screen.minY, usable.minY) + stripMargin,
                           width: width, height: bottomStripHeight)
         case .side:
             let h = sideHeight(owner)
