@@ -9,7 +9,6 @@ fish_add_path /usr/local/bin /opt/homebrew/bin $HOME/.npm-global/bin $HOME/.loca
 # Fish loads conf.d/*.fish automatically; the local key file is gitignored.
 
 alias c="clear"
-alias ft="fastfetch --kitty-icat ~/.config/fastfetch/images/phainon_clear.png"
 alias mole="/opt/homebrew/opt/mole/bin/mole"
 alias agy="agy --dangerously-skip-permissions"
 

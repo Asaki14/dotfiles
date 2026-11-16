@@ -9,8 +9,6 @@ brew "fzf"             # fish yazi
 brew "git"             # git
 brew "gh"              # gh
 brew "btop"            # btop
-brew "fastfetch"       # fastfetch
-brew "md-tui"          # mdt
 brew "neovim"          # nvim
 brew "ripgrep"         # nvim yazi
 brew "fd"              # nvim yazi

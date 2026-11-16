@@ -11,7 +11,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 CONFIG="$HOME/.config"
-MODULES=(beets btop fastfetch fish freshrss gh git karabiner linearmouse mdt mpd nvim omacosy rmpc tern tinycast yazi)
+MODULES=(beets btop fish freshrss gh git karabiner linearmouse mpd nvim omacosy rmpc tern tinycast yazi)
 BACKUP="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
 DRY=0 BREW=1 DESKTOP=1 NETWORK=1
 SELECTED=("${MODULES[@]}")
@@ -228,6 +228,5 @@ cat <<'NEXT'
   Optional, by hand:
     sh ~/.config/mpd/nowplaying/install.sh       # MPD on macOS Now Playing and the media keys
     ~/.config/mpd/playlist-sync                   # link playlists for MPD, fetch missing songs
-    see ~/.config/freshrss/README.md              # FreshRSS and its translation worker
-    see ~/.config/tinycast/scripts/README.md      # import the system commands into Tinycast
+    see "FreshRSS" and "Tinycast" in ~/.config/README.md
 NEXT

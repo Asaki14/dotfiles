@@ -9,7 +9,7 @@ with live previews, focused-window border rings, and one theme switch
 that covers everything down to the wallpaper. All of it installs from
 this one repo.
 
-![The omacosy desktop — themed bar over the osaka-jade wallpaper](docs/screenshots/desktop.jpg)
+![The omacosy desktop — themed bar over the osaka-jade wallpaper](https://raw.githubusercontent.com/paulsp94/omacosy/5503f7c16efd22d702609b41c6d0f9575eefc96c/docs/screenshots/desktop.jpg)
 
 The whole environment idles at about **157MB** of memory. Numbers per
 process in [Memory use](#memory-use).
@@ -378,7 +378,7 @@ startup and does no config-file or image-file I/O while it draws.
   Missed sleep events run on wake; logged-out/powered-off time is not replayed.
   If sleep spans both events, macOS does not guarantee their execution order.
   The brightness popup's manual control and any existing macOS schedule
-  remain unchanged. [Isolated verification](test/README.md#night-shift-schedule).
+  remain unchanged.
 - **Brightness**: scroll adjusts, click opens a slider (DisplayServices,
   no deps). Scrolling past 0 keeps going: a **shade** dims the display
   below its hardware minimum by scaling gamma, so there is no overlay
@@ -466,7 +466,7 @@ on re-runs and names such keyboards when it finds one connected.
 | `Super+shift+q` | lock the screen |
 | `Super+k` | keybinding cheatsheet (this table, rendered from the config) |
 
-![The keybinding cheatsheet — every binding, parsed from aerospace.toml](docs/screenshots/cheatsheet.jpg)
+![The keybinding cheatsheet — every binding, parsed from aerospace.toml](https://raw.githubusercontent.com/paulsp94/omacosy/5503f7c16efd22d702609b41c6d0f9575eefc96c/docs/screenshots/cheatsheet.jpg)
 
 Screenshots, clipboard and app switching stay macOS's own
 (`Cmd+Shift+3/4/5`, `Cmd+C/V`, `Cmd+Tab`). `Alt+Tab` above is the
@@ -548,7 +548,7 @@ inset and gap into the new values.
 
 ## Tiling: dwindle
 
-![Three terminals in a dwindle layout — README, git log and btop — accent border ring on the focused one](docs/screenshots/tiling.jpg)
+![Three terminals in a dwindle layout — README, git log and btop — accent border ring on the focused one](https://raw.githubusercontent.com/paulsp94/omacosy/5503f7c16efd22d702609b41c6d0f9575eefc96c/docs/screenshots/tiling.jpg)
 
 AeroSpace natively inserts new windows as equal siblings, so three
 windows become three columns. Hyprland's dwindle splits the focused
@@ -679,7 +679,7 @@ them.
 
 ## Workspace overview
 
-![Workspace overview — live preview cards over the zoomed-out wallpaper, chips for empty workspaces](docs/screenshots/overview.jpg)
+![Workspace overview — live preview cards over the zoomed-out wallpaper, chips for empty workspaces](https://raw.githubusercontent.com/paulsp94/omacosy/5503f7c16efd22d702609b41c6d0f9575eefc96c/docs/screenshots/overview.jpg)
 
 4-finger **swipe up**: the wallpaper breathes in behind a dim wash and
 every non-empty workspace of the cursor's monitor gets a card

@@ -13,7 +13,7 @@
 - **Status bar data**: weather, AI quota, synced lyrics, net speed and an intraday fund estimate
 - **Local music**: beets keeps the library, MPD plays it, rmpc is the player, and a Swift bridge puts MPD on macOS Now Playing and the media keys
 - **News reader**: FreshRSS in Docker with a reader extension that translates articles in the background
-- **Terminal and editor**: fish, Neovim (lazy.nvim), yazi with plugins, btop, fastfetch
+- **Terminal and editor**: fish, Neovim (lazy.nvim), yazi with plugins, btop
 - **Input that follows the pane**: a Tern plugin switches the macOS input source per terminal pane
 - **System actions**: lock, sleep, appearance and weather as [Tinycast](https://tinycast.dev) script commands
 
@@ -45,7 +45,7 @@ If `~/.config` already exists, clone anywhere else: `install.sh` then links each
 ## Before installing
 
 - [Tern](https://stencil.so/tern) is in closed beta; install it yourself. The AI quota and article translation use [omp](https://github.com/can1357/oh-my-pi), which you install and log in to yourself.
-- FreshRSS is set up by hand: see [freshrss/README.md](freshrss/README.md).
+- FreshRSS and Tinycast are set up by hand: see [FreshRSS](#freshrss) and [Tinycast](#tinycast) below.
 - The omacosy installer changes macOS defaults, loads LaunchAgents, compiles helpers, sets the wallpaper and overwrites desktop configuration. File backups do not undo system settings. Read [omacosy/src/README.md](omacosy/src/README.md) first, or pass `--no-desktop`.
 - API keys go in `fish/conf.d/api_keys.local.fish`, which is gitignored.
 
@@ -55,7 +55,7 @@ If `~/.config` already exists, clone anywhere else: `install.sh` then links each
 |---|---|
 | `omacosy/src/` | The desktop: bar, window manager config, themes and their installer. `UPSTREAM` records the upstream commit it is based on |
 | `omacosy/` | Bar layout (`bar-items.conf`) and its data scripts: weather, AI usage, lyrics, fund estimate |
-| `fish/` `nvim/` `yazi/` `btop/` `fastfetch/` | Shell, editor, file manager and terminal tools |
+| `fish/` `nvim/` `yazi/` `btop/` | Shell, editor, file manager and system monitor |
 | `mpd/` `rmpc/` `beets/` | Music library, playback, playlists and the Now Playing bridge |
 | `freshrss/` | FreshRSS compose file, reader extension and translation worker |
 | `tern/plugins/` `tinycast/scripts/` | Tern terminal plugin and Tinycast system commands |
@@ -63,8 +63,50 @@ If `~/.config` already exists, clone anywhere else: `install.sh` then links each
 
 Paths that differ per machine but are not detected: the music library (`~/Music/lib` in `mpd/mpd.conf` and `beets/config.yaml`) and the `omp` binary (`freshrss/reader-settings.json`).
 
+## FreshRSS
+
+A local FreshRSS (`127.0.0.1:8088`, feeds update at minutes 7 and 37) whose `LocalReader` extension shows foreign-language articles in Chinese, with `查看原文` for the original. `reader.py` translates them in the background through omp with the model in `reader-settings.json`, so article text goes to that provider. The Mac must be awake.
+
+```sh
+colima start
+docker-compose -f ~/.config/freshrss/compose.yaml up -d
+open http://localhost:8088/              # create the admin user; it becomes the default user
+~/.config/freshrss/install-reader.sh     # LaunchAgent local.freshrss.reader, every 30 s
+```
+
+| Task | Command or place |
+|---|---|
+| Refresh feeds now | `docker exec --user www-data freshrss cli/actualize-user.php --user <user>` |
+| Run the translator now | `launchctl kickstart gui/$(id -u)/local.freshrss.reader` |
+| Translator log | `freshrss/reader-data/worker.log` |
+| Back up | Docker volumes `freshrss_freshrss_data`, `freshrss_freshrss_extensions` and `freshrss/reader-data/`; `down -v` deletes the volumes |
+| Other devices | `tailscale serve --bg --https=8443 http://127.0.0.1:8088` |
+
+Tests: `cd freshrss && uv run --with beautifulsoup4 --with lxml_html_clean --with markdown --with markdownify --with readability-lxml python -m unittest -v test_reader`
+
+## Tinycast
+
+Import once per machine: Tinycast Settings → Commands → enable custom commands → Import → choose `~/.config/tinycast/scripts`. The imported commands run the scripts in place, so keep the directory. Turn on "Show output" for Weather; it runs on demand.
+
+| Command | Does | First-run permission |
+|---|---|---|
+| Toggle Appearance | Switches dark / light | Automation → System Events |
+| Weather | Current weather for `omacosy/scripts/location.local.json` | none |
+| Lock Screen | Sends ⌃⌘Q, which locks at once regardless of the screen-lock grace period | Accessibility |
+| Sleep | `pmset sleepnow`, after a confirmation | none |
+
+## Tern input source
+
+`tern/plugins/input-source-policy` switches the macOS input source when focus moves between Tern panes: agent blocks get the last CJK source (Rime by default), panes titled `yazi`, `dooit` or `rmpc` and everything else get US Extended. A switch happens only when the focused pane or its class changes and has held for 700 ms, so a manual switch inside a pane sticks.
+
+```sh
+tern plugin link ~/.config/tern/plugins/input-source-policy   # install.sh runs this
+tern/plugins/input-source-policy/scripts/input-source-policy status
+```
+
+The ASCII app list is `ASCII_APPS` in `window.luau`. Each switch is logged to `~/.local/state/tern-input-source-policy/policy.log`.
+
 ## Notes
 
 - `AGENTS.md` describes how the pieces talk to each other.
-- [HISTORY.md](HISTORY.md) is the log of how this setup came to be.
 - Licensed under [MIT](LICENSE). omacosy keeps its own license in `omacosy/src/LICENSE`.
