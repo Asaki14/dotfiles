@@ -8,7 +8,7 @@ Tinycast 负责唤起这些 Omarchy 风格系统动作。脚本保留 `@raycast.
 2. 点击导入，选择 `~/.config/tinycast/scripts`。
 3. 编辑 Weather，打开「显示输出」。Tinycast 不支持 Raycast 的 `inline` 自动刷新，天气需手动执行。
 
-导入后，命令仍引用这个目录中的脚本。不要删除该目录。快捷键可在命令编辑器中设置。早期从 `~/.config/raycast/scripts` 导入的机器，在本地保留指向这里的软链接 `raycast/scripts` 即可，无需重新导入。
+导入后，命令仍引用这个目录中的脚本。不要删除该目录。快捷键可在命令编辑器中设置。
 
 ## 脚本清单
 
@@ -36,7 +36,7 @@ Tinycast 负责唤起这些 Omarchy 风格系统动作。脚本保留 `@raycast.
 - **天气图标用 emoji，不用 Nerd Font 字形。** 天气分类和中文文案复用
   `omacosy/scripts/weather_lib.py`（和状态栏同一份口径），但图标另映射成
   emoji，避免启动器使用系统字体时将 Nerd Font 字形显示成豆腐块。
-  数据优先读 OMacOSy 的 Open-Meteo 缓存 `/tmp/sketchybar_daemon/weather.json`，缺失才回源 wttr.in。
+  数据优先读 OMacOSy 的 Open-Meteo 缓存 `/tmp/sketchybar_daemon/weather.json`，缺失才直接请求 Open-Meteo。
 
 ## 不在这批里的东西
 

@@ -6,8 +6,8 @@ This repository contains Fish shell configuration files under `~/.config/fish`.
 
 - `config.fish` is the main interactive shell entrypoint for paths, aliases, key bindings, proxy helpers, Starship setup, and local environment exports.
 - `conf.d/` contains Fish files loaded automatically by Fish. Keep machine-local files such as `conf.d/api_keys.local.fish` untracked.
-- `functions/` stores autoloaded Fish functions, currently including `functions/fisher.fish`.
-- `completions/` stores command completion scripts, such as `completions/fisher.fish` and `completions/fastanime.fish`.
+- `functions/` stores autoloaded Fish functions: `functions/fisher.fish` and `functions/ytm.fish`.
+- `completions/` stores command completion scripts, such as `completions/fisher.fish`.
 - `fish_plugins` lists Fisher-managed plugins. Keep this file small and declarative.
 - `fish_variables` holds Fish universal variables, machine state Fish writes itself; it is gitignored and stays local.
 

@@ -17,7 +17,7 @@ This repository is the public `Asaki14/dotfiles`, checked out as `~/.config` its
 
 `/tmp/sketchybar_daemon` is a cache interface still used by OMacOSy helpers, not evidence of an active SketchyBar installation. Do not rename it without migrating its consumers.
 
-Active bar helpers live in `omacosy/scripts/`, not the archived `sketchybar/plugins/` tree. In `omacosy/bar-items.conf`, the `codexbar` directive points to `omacosy/scripts/omp_usage.py`: it reads OMP's usage cache from `~/.omp/agent/agent.db` read-only and emits the JSON shape consumed by the bar. The directive name is not a requirement to install CodexBar or restore `codexbar/config.json`.
+Active bar helpers live in `omacosy/scripts/`. In `omacosy/bar-items.conf`, the `codexbar` directive points to `omacosy/scripts/omp_usage.py`: it reads OMP's usage cache from `~/.omp/agent/agent.db` read-only and emits the JSON shape consumed by the bar. The directive name is not a requirement to install CodexBar.
 
 ## Key Directories
 
