@@ -1,0 +1,9 @@
+# Gruvbox: retro boxes, square corners, outlined on a solid strip.
+background = "solid"
+pill = "outline"
+radius = 0
+inset = 6
+gap = 6
+cluster = "pills"
+focus = "solid"
+layout = "market"

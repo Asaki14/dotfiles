@@ -1,0 +1,5 @@
+# omacosy flavor: ~/.config/yazi/flavors/omacosy.yazi, rendered from the current
+# omacosy palette by yazi-theme-fragment on every theme-set; not committed
+[flavor]
+	dark  = "omacosy"
+	light = "omacosy"

@@ -1,0 +1,33 @@
+[mgr]
+# 排序：按字母排序，文件夹始终排在文件前面
+sort_by      = "alphabetical"
+sort_sensitive = false
+sort_reverse   = false
+sort_dir_first = true
+
+# 布局：三栏比例 1:2:5（左:中:右）
+ratio = [ 2, 2, 4 ]
+
+# 显示隐藏文件
+show_hidden = true
+
+[preview]
+# 预览：开启图片预览
+image_filter = "lanczos3"
+image_quality = 75
+tab_size = 2
+max_width = 1024
+max_height = 1024
+
+[opener]
+edit = [
+	{ run = 'nvim "$@"', block = true, desc = "Neovim", for = "unix" },
+]
+
+[open]
+rules = [
+	{ url = "*/", use = [ "edit", "open", "reveal" ] },
+	{ mime = "text/*", use = [ "edit", "reveal" ] },
+	{ mime = "application/json", use = [ "edit", "reveal" ] },
+	{ mime = "*", use = [ "open", "reveal" ] },
+]

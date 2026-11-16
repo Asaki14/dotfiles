@@ -1,0 +1,9 @@
+# Osaka Jade: minimal, no boxes; an accent underline marks each item.
+background = "solid"
+pill = "underline"
+radius = 0
+inset = 4
+gap = 18
+cluster = "pills"
+focus = "tint"
+layout = "zen"

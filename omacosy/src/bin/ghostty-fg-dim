@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# ghostty-fg-dim [比例|+N|-N] — 把终端默认前景色往背景压暗并即时重载。
+#
+# 为什么是终端前景而不是 omp 主题：omp 的 markdown 渲染只给标题/链接/代码/引用上色，
+# 普通段落不带 SGR，所以助手正文用的就是终端默认前景。omp 主题里的 `text` 只管输入框。
+#
+# 值写在 ~/.local/state/omacosy/ghostty-fg-dim，由 ghostty-theme-fragment 读取，
+# 所以换 omacosy 主题后依然生效。0 = 主题原色。
+#
+#   ghostty-fg-dim         # 看当前值
+#   ghostty-fg-dim 0.25    # 压暗 25%（亮度约剩 57%）
+#   ghostty-fg-dim +0.05   # 再暗一点
+#   ghostty-fg-dim 0       # 还原
+set -euo pipefail
+
+STATE="$HOME/.local/state/omacosy/ghostty-fg-dim"
+FRAGMENT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ghostty-theme-fragment"
+MAX=0.6 # 再往下正文对比度掉出 WCAG AA，不如直接换主题
+
+CUR="$(cat "$STATE" 2>/dev/null || echo 0)"
+if [ $# -eq 0 ]; then
+  echo "$CUR"
+  exit 0
+fi
+
+NEW="$(python3 - "$CUR" "$1" "$MAX" <<'PY'
+import sys
+cur, arg, cap = sys.argv[1], sys.argv[2], float(sys.argv[3])
+value = float(cur) + float(arg) if arg[0] in "+-" else float(arg)
+print(f"{min(cap, max(0.0, value)):.2f}")
+PY
+)"
+
+mkdir -p "$(dirname "$STATE")"
+printf '%s' "$NEW" > "$STATE"
+# 片段负责实际换算并广播 SIGUSR2
+"$FRAGMENT" >/dev/null
+echo "$CUR -> $NEW"

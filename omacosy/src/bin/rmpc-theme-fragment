@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# rmpc-theme-fragment [theme-dir] [out] — render the omarchy palette into an
+# rmpc theme file, then push it into every running rmpc. rmpc's own config
+# watcher only fires on close-write events, which macOS never delivers, so the
+# explicit `rmpc remote set theme` is what repaints an open instance.
+# Idempotent, safe to re-run, and a no-op when the palette is unreadable.
+# Set RMPC_THEME_NO_RELOAD=1 to skip the push (used by tests).
+
+set -euo pipefail
+REPO_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+TEMPLATE="$REPO_DIR/config/rmpc/theme.ron.tmpl"
+SRC="${1:-$HOME/.config/omarchy/current/theme}/colors.toml"
+# inside rmpc's config dir so `theme: "omacosy"` in config.ron resolves it
+OUT="${2:-$HOME/.config/rmpc/themes/omacosy.ron}"
+[ -r "$SRC" ] || exit 0
+
+val() { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\(.*\)\".*/\1/p" "$SRC" | head -1; }
+
+# template token=colors.toml key; a plain list so /bin/bash 3.2 (bare hotkey
+# PATH) can run this as well as Homebrew bash
+SED_ARGS=()
+for pair in accent=accent fg=foreground bg=background \
+            surface=color0 red=color1 green=color2 yellow=color3 \
+            blue=color4 magenta=color5 cyan=color6 muted=color8; do
+  token="${pair%%=*}"; key="${pair#*=}"
+  color="$(val "$key")"
+  [[ "$color" =~ ^#[0-9a-fA-F]{6}$ ]] || { echo "invalid theme $key: $color" >&2; exit 1; }
+  SED_ARGS+=(-e "s/@$token@/$color/g")
+done
+
+mkdir -p "$(dirname "$OUT")"
+# write-then-rename, so a reload can never observe a half-written file
+{
+  echo "// generated from $SRC by rmpc-theme-fragment — do not edit"
+  sed "${SED_ARGS[@]}" "$TEMPLATE"
+} > "$OUT.tmp"
+if grep -q '@[a-z_]*@' "$OUT.tmp"; then
+  echo "unrendered token in template: $(grep -o '@[a-z_]*@' "$OUT.tmp" | sort -u | tr '\n' ' ')" >&2
+  rm -f "$OUT.tmp"
+  exit 1
+fi
+mv "$OUT.tmp" "$OUT"
+
+# hotkey callers (karabiner, aerospace) come with a bare PATH
+[ -n "${RMPC_THEME_NO_RELOAD:-}" ] && exit 0
+RMPC="$(command -v rmpc || echo /opt/homebrew/bin/rmpc)"
+[ -x "$RMPC" ] && pgrep -x rmpc >/dev/null && "$RMPC" remote set theme "$OUT" >/dev/null 2>&1 || true

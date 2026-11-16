@@ -1,0 +1,23 @@
+services:
+  freshrss:
+    image: freshrss/freshrss:1.30.4
+    container_name: freshrss
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8088:80"
+    environment:
+      TZ: Asia/Shanghai
+      CRON_MIN: "7,37"
+    volumes:
+      - freshrss_data:/var/www/FreshRSS/data
+      - freshrss_extensions:/var/www/FreshRSS/extensions
+      - ./extensions/xExtension-LocalReader:/var/www/FreshRSS/extensions/xExtension-LocalReader:ro
+      - ./reader-data:/var/www/FreshRSS/reader-data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
+volumes:
+  freshrss_data:
+  freshrss_extensions:

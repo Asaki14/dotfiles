@@ -1,0 +1,30 @@
+# beets —— 把 ~/Music/inbox 里的新文件打标签后移入 ~/Music/lib，mpd 只读 lib
+directory: ~/Music/lib
+library: ~/.local/share/beets/library.db
+
+import:
+  move: yes          # 导入即移动，inbox 保持为空
+  write: yes
+  incremental: yes   # 已处理过的目录不再重复问
+  quiet_fallback: asis   # -q 下匹配不够强就保留文件自带标签（YouTube 批量下载时标签来自 Spotify，已准确）
+  log: ~/.local/share/beets/import.log
+
+paths:
+  default: $albumartist/$album%aunique{} ($year)/$track - $title
+  singleton: Singles/$artist/$title
+  comp: Compilations/$album%aunique{} ($year)/$track - $title
+
+# beets 2.x 起 MusicBrainz 是独立插件，不列出来 import 就查不到任何候选
+plugins: musicbrainz fetchart embedart duplicates
+
+fetchart:
+  auto: yes
+  cautious: yes
+  sources: [coverart, itunes, amazon, albumart]
+
+embedart:
+  auto: yes
+  remove_art_file: no   # 保留 cover.jpg 给 rmpc 读专辑目录封面
+
+ui:
+  color: yes

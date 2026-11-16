@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# ghostty-theme-fragment [theme-dir] [out] — render the omarchy palette into a
+# Ghostty config fragment, then live-reload every running Ghostty. Ghostty reads
+# its config only at launch and has no file watcher, so the SIGUSR2 broadcast is
+# what repaints already-open windows; an included fragment outranks every
+# top-level key, so this also wins over a personal `theme = ...`.
+# Idempotent, safe to re-run, and a no-op when the palette is unreadable.
+# Set GHOSTTY_THEME_NO_RELOAD=1 to skip the reload (used by tests).
+
+set -euo pipefail
+SRC="${1:-$HOME/.config/omarchy/current/theme}/colors.toml"
+OUT="${2:-$HOME/.local/state/omacosy/ghostty-theme.conf}"
+[ -r "$SRC" ] || exit 0
+
+val() { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\(.*\)\".*/\1/p" "$SRC" | head -1; }
+
+# Ghostty's canvas is the theme background verbatim. It used to be lifted 8%
+# toward white, which only made sense at background-opacity = 1; under a
+# translucent window the wallpaper already lifts the blend, and the extra 8%
+# just washed the text out.
+BACKGROUND="$(val background)"
+[[ "$BACKGROUND" =~ ^#[0-9a-fA-F]{6}$ ]] || { echo "invalid theme background: $BACKGROUND" >&2; exit 1; }
+
+# 终端默认前景色也是 omp 助手正文的颜色：omp 的 markdown 渲染只给标题/链接/代码上色，
+# 段落文字不带 SGR，落到终端默认前景上。主题给的浅色长时间读刺眼，这里按比例往背景混。
+# 0 = 原样（默认）。GHOSTTY_FG_DIM 覆盖状态文件，供测试与一次性试色使用。
+FG_DIM_FILE="$HOME/.local/state/omacosy/ghostty-fg-dim"
+FG_DIM="${GHOSTTY_FG_DIM:-$(cat "$FG_DIM_FILE" 2>/dev/null || echo 0)}"
+[[ "$FG_DIM" =~ ^0?\.?[0-9]*$ ]] || { echo "invalid fg dim: $FG_DIM" >&2; exit 1; }
+FOREGROUND="$(val foreground)"
+[[ "$FOREGROUND" =~ ^#[0-9a-fA-F]{6}$ ]] || { echo "invalid theme foreground: $FOREGROUND" >&2; exit 1; }
+if [ "$(printf '%.0f' "$(echo "$FG_DIM * 1000" | bc -l)")" -gt 0 ]; then
+  CHANNELS=()
+  for offset in 1 3 5; do
+    f=$((16#${FOREGROUND:$offset:2}))
+    b=$((16#${BACKGROUND:$offset:2}))
+    CHANNELS+=("$(printf '%.0f' "$(echo "$f - ($f - $b) * $FG_DIM" | bc -l)")")
+  done
+  printf -v FOREGROUND '#%02x%02x%02x' "${CHANNELS[@]}"
+fi
+
+mkdir -p "$(dirname "$OUT")"
+# write-then-rename, so a reload can never observe a half-written file
+{
+  echo "# generated from $SRC by ghostty-theme-fragment — do not edit"
+  for i in $(seq 0 15); do printf 'palette = %d=%s\n' "$i" "$(val "color$i")"; done
+  printf 'background = %s\n'           "$BACKGROUND"
+  printf 'foreground = %s\n'           "$FOREGROUND"
+  printf 'cursor-color = %s\n'         "$(val cursor)"
+  # colors.toml has no cursor-text; without it the glyph under the cursor can
+  # go unreadable once cursor-color is themed
+  printf 'cursor-text = %s\n'          "$(val background)"
+  printf 'selection-background = %s\n' "$(val selection_background)"
+  printf 'selection-foreground = %s\n' "$(val selection_foreground)"
+  printf 'unfocused-split-fill = %s\n' "$(val color0)"
+  # color8 (bright black) keeps the divider as quiet as the default grey
+  printf 'split-divider-color = %s\n'  "$(val color8)"
+} > "$OUT.tmp" && mv "$OUT.tmp" "$OUT"
+
+# one Ghostty process per window here (open -na + quit-after-last-window-closed),
+# so the signal has to be broadcast rather than sent to a single pid
+[ -n "${GHOSTTY_THEME_NO_RELOAD:-}" ] || pkill -USR2 -x ghostty 2>/dev/null || true

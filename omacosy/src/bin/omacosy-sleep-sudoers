@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# omacosy-sleep-sudoers — let the bar's sleep pill flip `pmset -a disablesleep`
+# without a password prompt.
+#
+# The `caffeinate on` pill toggles the system-wide disablesleep switch, which
+# is root-only. This installs /etc/sudoers.d/omacosy-disablesleep allowing the
+# invoking user to run exactly `/usr/bin/pmset -a disablesleep 0` and `... 1`
+# with no password — nothing else gains root. The rule is syntax-checked with
+# visudo before it is moved into place, so a bad file can never lock sudo out.
+#
+#   sudo omacosy-sleep-sudoers            # install for the user who ran sudo
+#   sudo omacosy-sleep-sudoers --remove   # uninstall
+set -euo pipefail
+
+target=/etc/sudoers.d/omacosy-disablesleep
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "run with sudo: sudo $0 ${*:-}" >&2
+  exit 1
+fi
+
+if [ "${1:-}" = "--remove" ]; then
+  rm -f "$target"
+  echo "removed $target"
+  exit 0
+fi
+
+user="${SUDO_USER:-}"
+if [ -z "$user" ] || [ "$user" = root ]; then
+  echo "run through sudo from your own account so the rule names you" >&2
+  exit 1
+fi
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+printf '%s ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bin/pmset -a disablesleep 1\n' "$user" > "$tmp"
+visudo -cf "$tmp" >/dev/null
+install -m 0440 -o root -g wheel "$tmp" "$target"
+echo "installed $target for $user"

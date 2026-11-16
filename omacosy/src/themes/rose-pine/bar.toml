@@ -1,0 +1,8 @@
+# Rosé Pine: soft rounded pills floating on the wallpaper.
+pill = "solid"
+radius = 6
+inset = 8
+gap = 12
+cluster = "pills"
+focus = "tint"
+layout = "classic"

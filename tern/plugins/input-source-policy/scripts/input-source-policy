@@ -1,0 +1,19 @@
+#!/bin/sh
+# Runs the input-source binary, building it first when it is missing or older
+# than the source. The binary lives in the user cache, not in the plugin
+# directory: Tern reloads a linked plugin whenever a file under it changes.
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+source="$root/src/main.swift"
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/tern-input-source-policy"
+binary="$cache/input-source-policy"
+
+if [ ! -x "$binary" ] || [ "$source" -nt "$binary" ]; then
+    mkdir -p "$cache"
+    tmp="$binary.$$"
+    xcrun swiftc -O -framework Carbon "$source" -o "$tmp"
+    mv -f "$tmp" "$binary"
+fi
+
+exec "$binary" "$@"

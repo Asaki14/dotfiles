@@ -1,0 +1,7 @@
+schema = 1
+id = "omacosy-theme"
+name = "omacosy theme"
+version = "0.2.0"
+description = "Keeps the selected Tern theme from 08:00 to 19:30 and follows the omacosy desktop palette at night."
+icon = "sparkle"
+window = "window.luau"

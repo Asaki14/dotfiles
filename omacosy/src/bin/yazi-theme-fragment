@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# yazi-theme-fragment [theme-dir] [flavor-dir] — render the omarchy palette into
+# a yazi flavor (flavor.toml for the UI, tmtheme.xml for code previews), then
+# ask every running yazi to reload it. Yazi reads its theme only at startup;
+# `ya emit-to 0 app:theme` broadcasts the hot-reload action to all instances.
+# Idempotent, safe to re-run, and a no-op when the palette is unreadable.
+# Set YAZI_THEME_NO_RELOAD=1 to skip the reload (used by tests).
+
+set -euo pipefail
+REPO_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+SRC="${1:-$HOME/.config/omarchy/current/theme}/colors.toml"
+# inside yazi's config dir so `dark = "omacosy"` in theme.toml resolves it
+OUT_DIR="${2:-$HOME/.config/yazi/flavors/omacosy.yazi}"
+[ -r "$SRC" ] || exit 0
+
+val() { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\(.*\)\".*/\1/p" "$SRC" | head -1; }
+
+# template token=colors.toml key; a plain list so /bin/bash 3.2 (bare hotkey
+# PATH) can run this as well as Homebrew bash
+SED_ARGS=()
+for pair in accent=accent fg=foreground bg=background \
+            surface=color0 red=color1 green=color2 yellow=color3 \
+            blue=color4 magenta=color5 cyan=color6 muted=color8; do
+  token="${pair%%=*}"; key="${pair#*=}"
+  color="$(val "$key")"
+  [[ "$color" =~ ^#[0-9a-fA-F]{6}$ ]] || { echo "invalid theme $key: $color" >&2; exit 1; }
+  SED_ARGS+=(-e "s/@$token@/$color/g")
+done
+
+# render both files before replacing either, so a bad template never leaves
+# the flavor half old, half new
+mkdir -p "$OUT_DIR"
+for name in flavor.toml tmtheme.xml; do
+  sed "${SED_ARGS[@]}" "$REPO_DIR/config/yazi/$name.tmpl" > "$OUT_DIR/$name.tmp"
+  if grep -q '@[a-z_]*@' "$OUT_DIR/$name.tmp"; then
+    echo "unrendered token in $name template: $(grep -o '@[a-z_]*@' "$OUT_DIR/$name.tmp" | sort -u | tr '\n' ' ')" >&2
+    rm -f "$OUT_DIR"/*.tmp
+    exit 1
+  fi
+done
+# write-then-rename, so a reload can never observe a half-written file
+mv "$OUT_DIR/flavor.toml.tmp" "$OUT_DIR/flavor.toml"
+mv "$OUT_DIR/tmtheme.xml.tmp" "$OUT_DIR/tmtheme.xml"
+
+# hotkey callers (karabiner, aerospace) come with a bare PATH
+[ -n "${YAZI_THEME_NO_RELOAD:-}" ] && exit 0
+YA="$(command -v ya || echo /opt/homebrew/bin/ya)"
+[ -x "$YA" ] && pgrep -x yazi >/dev/null && "$YA" emit-to 0 app:theme >/dev/null 2>&1 || true

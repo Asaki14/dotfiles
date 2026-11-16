@@ -1,0 +1,243 @@
+// rmpc theme template, rendered by bin/rmpc-theme-fragment on every theme-set.
+// Tokens of the form at-sign NAME at-sign are palette entries from the theme's colors.toml:
+//   accent, fg (foreground), bg (background), surface (color0), muted (color8),
+//   red (color1), green (color2), yellow (color3), blue (color4),
+//   magenta (color5), cyan (color6).
+// The background stays None so Ghostty's translucency shows through; depth
+// comes from the accent and from surface/muted, not from filled panels.
+#![enable(implicit_some)]
+#![enable(unwrap_newtypes)]
+#![enable(unwrap_variant_newtypes)]
+(
+    default_album_art_path: None,
+    draw_borders: false,
+    show_song_table_header: false,
+    format_tag_separator: " | ",
+    browser_column_widths: [20, 38, 42],
+    background_color: None,
+    text_color: "@fg@",
+    header_background_color: None,
+    modal_background_color: "@surface@",
+    modal_backdrop: true,
+    preview_label_style: (fg: "@yellow@"),
+    preview_metadata_group_style: (fg: "@yellow@", modifiers: "Bold"),
+    highlighted_item_style: (fg: "@accent@", modifiers: "Bold"),
+    current_item_style: (fg: "@bg@", bg: "@accent@", modifiers: "Bold"),
+    borders_style: (fg: "@muted@"),
+    highlight_border_style: (fg: "@accent@"),
+    symbols: (
+        song: "",
+        dir: "",
+        playlist: "",
+        marker: "▎",
+        ellipsis: "…",
+        song_style: (fg: "@cyan@"),
+        dir_style: (fg: "@blue@"),
+        playlist_style: (fg: "@magenta@"),
+    ),
+    level_styles: (
+        info: (fg: "@blue@", bg: "@surface@"),
+        warn: (fg: "@yellow@", bg: "@surface@"),
+        error: (fg: "@red@", bg: "@surface@"),
+        debug: (fg: "@green@", bg: "@surface@"),
+        trace: (fg: "@magenta@", bg: "@surface@"),
+    ),
+    progress_bar: (
+        symbols: ["╶", "━", "╸", "─", "╴"],
+        track_style: (fg: "@surface@"),
+        elapsed_style: (fg: "@accent@"),
+        thumb_style: (fg: "@accent@"),
+        use_track_when_empty: true,
+    ),
+    scrollbar: (
+        symbols: ["│", "┃", " ", " "],
+        track_style: (fg: "@surface@"),
+        ends_style: (fg: "@surface@"),
+        thumb_style: (fg: "@accent@"),
+    ),
+    tab_bar: (
+        active_style: (fg: "@bg@", bg: "@accent@", modifiers: "Bold"),
+        inactive_style: (fg: "@muted@"),
+    ),
+    lyrics: (
+        timestamp: false,
+    ),
+    song_table_album_separator: None,
+    browser_song_format: [
+        (
+            kind: Group([
+                (kind: Property(Track)),
+                (kind: Text(" ")),
+            ])
+        ),
+        (
+            kind: Group([
+                (kind: Property(Artist)),
+                (kind: Text(" - ")),
+                (kind: Property(Title)),
+            ]),
+            default: (kind: Property(Filename))
+        ),
+    ],
+    // Queue rows read "Artist · Title  4:56", every column left-aligned.
+    song_table_format: [
+        (
+            prop: (kind: Property(Artist), style: (fg: "@yellow@"),
+                default: (kind: Text("Unknown"), style: (fg: "@muted@"))),
+            width: "38%",
+            alignment: Left,
+        ),
+        (
+            prop: (kind: Text("·"), style: (fg: "@muted@")),
+            width: "4%",
+            alignment: Left,
+        ),
+        (
+            prop: (kind: Property(Title),
+                default: (kind: Property(Filename), style: (fg: "@muted@"))),
+            width: "50%",
+        ),
+        (
+            prop: (kind: Property(Duration), style: (fg: "@muted@"),
+                default: (kind: Text("-"), style: (fg: "@muted@"))),
+            width: "8%",
+            alignment: Left,
+        ),
+    ],
+    cava: (
+        bar_symbols: ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'],
+        inverted_bar_symbols: ['▔', '🮂', '🮃', '▀', '🮄', '🮅', '🮆', '█'],
+        bg_color: None,
+        bar_color: Single("@accent@"),
+        bar_width: 1,
+        bar_spacing: 1,
+        orientation: Bottom,
+    ),
+    // Three modules, ruled apart: navigation on top, the tab content in the
+    // middle, the playing song at the bottom. Each module sits flush against
+    // its rule; one blank row above the tabs keeps them off the screen edge,
+    // and the progress bar is the last row. No frames.
+    layout: Split(
+        direction: Vertical,
+        panes: [
+            (size: "2", pane: Component("navigation")),
+            (size: "100%", borders: "TOP | BOTTOM", pane: Pane(TabContent)),
+            (size: "2", pane: Component("now_playing")),
+        ],
+    ),
+    components: {
+        //                 Queue  Artists  Playlists  Search       115 tracks · 7:42:10
+        "navigation": Split(
+            direction: Vertical,
+            panes: [
+                (size: "1", pane: Pane(Empty())),
+                (size: "1", pane: Split(
+                    direction: Horizontal,
+                    panes: [
+                        // rmpc centres the tab bar inside its pane; an empty column as
+                        // wide as the track count on the right keeps it centred on screen
+                        (size: "25", pane: Pane(Empty())),
+                        (size: "100%", pane: Pane(Tabs)),
+                        (size: "24", pane: Pane(Property(
+                            content: [
+                                (kind: Property(Status(QueueLength())), style: (fg: "@muted@")),
+                                (kind: Text(" tracks · "), style: (fg: "@muted@")),
+                                (kind: Property(Status(QueueTimeTotal())), style: (fg: "@muted@")),
+                            ],
+                            align: Left,
+                        ))),
+                        (size: "1", pane: Pane(Empty())),
+                    ],
+                )),
+            ],
+        ),
+        //                      Title - Artist                     42%  [zxcv]
+        //   1:23  ━━━━━━━━━━━━━━━━━━━━━╸──────────────────────────────────  4:56
+        // the title alone is bold: it is what the eye should land on first; the
+        // icon at the head of the progress bar reads like a player button: pause
+        // while playing, play while paused
+        "now_playing": Split(
+            direction: Vertical,
+            panes: [
+                (size: "1", pane: Split(
+                    direction: Horizontal,
+                    panes: [
+                        // as wide as the volume/mode block on the right, so the
+                        // song line is centred on screen
+                        (size: "25", pane: Pane(Empty())),
+                        (size: "100%", pane: Pane(Property(
+                            content: [
+                                (kind: Property(Song(Title)), style: (fg: "@cyan@", modifiers: "Bold"),
+                                    default: (kind: Text("No Song"), style: (fg: "@muted@", modifiers: "Bold"))),
+                                (kind: Text(" - "), style: (fg: "@muted@")),
+                                (kind: Property(Song(Artist)), style: (fg: "@yellow@"),
+                                    default: (kind: Text("Unknown"), style: (fg: "@muted@"))),
+                            ],
+                            align: Center,
+                            scroll_speed: 1,
+                        ))),
+                        (size: "24", pane: Pane(Property(
+                            content: [
+                                (kind: Text(" "), style: (fg: "@muted@")),
+                                (kind: Property(Status(Volume)), style: (fg: "@fg@")),
+                                (kind: Text("%  "), style: (fg: "@muted@")),
+                                (kind: Text("["), style: (fg: "@accent@", modifiers: "Bold")),
+                                (kind: Property(Status(RepeatV2(
+                                    on_label: "z", off_label: "z",
+                                    on_style: (fg: "@accent@", modifiers: "Bold"),
+                                    off_style: (fg: "@muted@", modifiers: "Dim"),
+                                )))),
+                                (kind: Property(Status(RandomV2(
+                                    on_label: "x", off_label: "x",
+                                    on_style: (fg: "@accent@", modifiers: "Bold"),
+                                    off_style: (fg: "@muted@", modifiers: "Dim"),
+                                )))),
+                                (kind: Property(Status(ConsumeV2(
+                                    on_label: "c", off_label: "c", oneshot_label: "c",
+                                    on_style: (fg: "@accent@", modifiers: "Bold"),
+                                    off_style: (fg: "@muted@", modifiers: "Dim"),
+                                    oneshot_style: (fg: "@yellow@", modifiers: "Bold"),
+                                )))),
+                                (kind: Property(Status(SingleV2(
+                                    on_label: "v", off_label: "v", oneshot_label: "v",
+                                    on_style: (fg: "@accent@", modifiers: "Bold"),
+                                    off_style: (fg: "@muted@", modifiers: "Dim"),
+                                    oneshot_style: (fg: "@yellow@", modifiers: "Bold"),
+                                )))),
+                                (kind: Text("]"), style: (fg: "@accent@", modifiers: "Bold")),
+                            ],
+                            align: Left,
+                        ))),
+                        (size: "1", pane: Pane(Empty())),
+                    ],
+                )),
+                (size: "1", pane: Split(
+                    direction: Horizontal,
+                    panes: [
+                        (size: "1", pane: Pane(Empty())),
+                        (size: "8", pane: Pane(Property(
+                            content: [
+                                (kind: Property(Status(StateV2(
+                                    playing_label: "", paused_label: "", stopped_label: "",
+                                    playing_style: (fg: "@accent@", modifiers: "Bold"),
+                                    paused_style: (fg: "@yellow@", modifiers: "Bold"),
+                                    stopped_style: (fg: "@muted@"),
+                                )))),
+                                (kind: Text(" ")),
+                                (kind: Property(Status(Elapsed)), style: (fg: "@muted@")),
+                            ],
+                            align: Left,
+                        ))),
+                        (size: "100%", pane: Pane(ProgressBar)),
+                        (size: "2", pane: Pane(Empty())),
+                        (size: "6", pane: Pane(Property(
+                            content: [(kind: Property(Status(Duration)), style: (fg: "@muted@"))],
+                            align: Left,
+                        ))),
+                        (size: "1", pane: Pane(Empty())),
+                    ],
+                )),
+            ],
+        ),
+    },
+)

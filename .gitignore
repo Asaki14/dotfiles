@@ -1,0 +1,61 @@
+# This repository is ~/.config itself, which also holds every other app's
+# state. Track only what is listed here, so a new app directory or a stray
+# personal file never reaches the public repo by accident.
+/*
+!/.gitignore
+!/AGENTS.md
+!/Brewfile
+!/HISTORY.md
+!/HISTORY.zh-CN.md
+!/LICENSE
+!/README.md
+!/README.zh-CN.md
+!/install.sh
+!/beets/
+!/btop/
+!/fastfetch/
+!/fish/
+!/freshrss/
+!/gh/
+!/git/
+!/karabiner/
+!/linearmouse/
+!/mdt/
+!/mpd/
+!/nvim/
+!/omacosy/
+!/rmpc/
+!/tern/
+!/tinycast/
+!/yazi/
+
+# everywhere
+.DS_Store
+*.swp
+*~
+__pycache__/
+*.pyc
+node_modules/
+*.bak
+*.bak.*
+
+# this machine only: written by install.sh or by the apps themselves
+*.local.conf
+*.local.json
+*.local.fish
+fish/fish_variables
+gh/hosts.yml
+beets/state.pickle
+karabiner/automatic_backups/
+omacosy/apps.conf
+omacosy/scripts/fission_fund_wallet.json
+mpd/playlists/*
+!mpd/playlists/example.m3u
+# copied in by omacosy/src/install.sh from omacosy/src/config
+omacosy/borders.conf
+omacosy/ffm-ignore
+omacosy/gesture.json
+
+# rendered from the omacosy palette on every theme-set
+rmpc/themes/omacosy.ron
+yazi/flavors/omacosy.yazi/

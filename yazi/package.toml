@@ -1,0 +1,9 @@
+[[plugin.deps]]
+use = "yazi-rs/plugins:smart-enter"
+rev = ""
+hash = ""
+
+[[plugin.deps]]
+use = "KKV9/compress"
+rev = "e60e122"
+hash = "fbaf0adc8efc59555b748d36aab62d40"

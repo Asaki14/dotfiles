@@ -1,0 +1,8 @@
+# Catppuccin: pastel capsules; the visible workspace is a filled chip.
+pill = "solid"
+radius = "full"
+inset = 8
+gap = 10
+cluster = "pills"
+focus = "solid"
+layout = "music"

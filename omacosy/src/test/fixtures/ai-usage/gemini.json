@@ -1,0 +1,24 @@
+[
+  {
+    "provider": "gemini",
+    "source": "omp",
+    "usage": {
+      "secondary": {
+        "usedPercent": 57,
+        "windowMinutes": 10080,
+        "resetsAt": "2026-09-15T04:02:18Z"
+      },
+      "extraRateWindows": [
+        {
+          "id": "google-antigravity:anthropic:default:3p-weekly",
+          "title": "Claude & GPT (shared)",
+          "window": {
+            "usedPercent": 0,
+            "windowMinutes": 10080,
+            "resetsAt": "2026-09-15T12:00:00Z"
+          }
+        }
+      ]
+    }
+  }
+]
