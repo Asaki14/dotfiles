@@ -4509,15 +4509,14 @@ final class AuxView: NSView {
         palette.muted.withAlphaComponent(0.3).setFill()
         NSRect(x: graph.minX, y: graph.minY, width: graph.width, height: 1).fill()
         let peak = max(10_000, netHistory.map { max($0.up, $0.down) }.max() ?? 0)
-        // down is the line that matters (accent), up rides along in the label
         sparkline(netHistory.map(\.down), in: graph, slots: netHistoryLength, low: 0, high: peak,
-                  color: palette.accent)
-        sparkline(netHistory.map(\.up), in: graph, slots: netHistoryLength, low: 0, high: peak,
                   color: palette.label.withAlphaComponent(0.55))
+        sparkline(netHistory.map(\.up), in: graph, slots: netHistoryLength, low: 0, high: peak,
+                  color: palette.accent)
         let last = netHistory.last ?? (0, 0)
         let x = rect.maxX - textW
-        drawText("↑ " + proxySpeedRate(last.up), small, palette.label, leftAt: x, midY: rect.midY + 6)
-        drawText("↓ " + proxySpeedRate(last.down), small, palette.accent, leftAt: x, midY: rect.midY - 6)
+        drawText("↑ " + proxySpeedRate(last.up), small, palette.accent, leftAt: x, midY: rect.midY + 6)
+        drawText("↓ " + proxySpeedRate(last.down), small, palette.label, leftAt: x, midY: rect.midY - 6)
     }
 
     // today's P&L: the figure in its tone, and the day's readings as a curve

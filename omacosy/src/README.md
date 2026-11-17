@@ -302,6 +302,7 @@ next theme switch, which resets the bar to the theme's `layout`.
 | `zen` | a left capsule with workspaces, AI, status and clock | the whole top bar |
 
 The `studio` bottom strip sits flush with the screen's bottom edge.
+Bottom-strip net speed uses the theme accent for upload and neutral text for download.
 Workspace indicators settle in 0.14 seconds. Bar animations follow the display's
 refresh cadence; continuous content keeps its own lower update rate, and the
 refresh callback stops when the bar is idle.
