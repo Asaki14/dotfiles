@@ -46,7 +46,6 @@ karabiner/automatic_backups/
 omacosy/apps.conf
 omacosy/scripts/fission_fund_wallet.json
 mpd/playlists/*
-!mpd/playlists/example.m3u
 # copied in by omacosy/src/install.sh from omacosy/src/config
 omacosy/borders.conf
 omacosy/ffm-ignore

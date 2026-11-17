@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """mpd/playlist-sync —— 维护 MPD 歌单并补齐缺失歌曲；歌单、歌曲文件与 .lrc 都只在本机，不进 git。
 
-歌单正本在 mpd/playlists/*.m3u（每行一个相对 ~/Music/lib 的路径；example.m3u 之外的文件被 gitignore）。
+歌单正本在 mpd/playlists/*.m3u（每行一个相对 ~/Music/lib 的路径；所有歌单均被 gitignore）。
 ~/.local/share/mpd/playlists 是指向它的软链，所以 mpd.conf 的 playlist_directory 不用改、MPD 不用重启。
 
 用法：mpd/playlist-sync [sync]
