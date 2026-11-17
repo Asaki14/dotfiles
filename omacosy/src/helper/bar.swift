@@ -620,7 +620,7 @@ var barStyle = loadBarStyle()
 // ~/.local/state/omacosy/bar-layout until the next theme switch, which hands
 // the decision back to the new theme.
 //   top modules hidable: workspaces, ai, media, and any right item name
-//   bottom modules:      lyrics, ai, net, fund
+//   bottom modules:      controls, meta, lyrics, ai, net, fund, movers, proxy
 //   side modules:        workspaces, status, ai, clock
 struct BarLayout: Equatable {
     var name: String
@@ -633,9 +633,9 @@ struct BarLayout: Equatable {
 
 let builtinLayouts: [BarLayout] = [
     BarLayout(name: "classic", title: "经典"),
-    BarLayout(name: "music", title: "音乐", topHidden: ["media"], bottom: ["lyrics"]),
+    BarLayout(name: "music", title: "音乐", topHidden: ["media"], bottom: ["controls", "meta", "lyrics"]),
     BarLayout(name: "market", title: "行情", topHidden: ["fission", "proxy-speed"],
-              bottom: ["fund", "net"]),
+              bottom: ["fund", "movers", "proxy", "net"]),
     BarLayout(name: "studio", title: "全景", topHidden: ["ai", "media", "fission", "proxy-speed"],
               bottom: ["ai", "lyrics", "net", "fund"]),
     BarLayout(name: "zen", title: "极简", noTop: true, side: ["workspaces", "ai", "status", "clock"]),
@@ -670,6 +670,7 @@ func setLayout(_ layout: BarLayout, persist: Bool) {
     layoutToast = ("布局 · \(layout.title)", motion.now)
     applyWMGaps()
     syncAuxSurfaces()
+    if layout.bottom.contains("proxy") { updateProxyGroups() }
     updateBarVisibility()
     repaint()
 }
@@ -2342,6 +2343,7 @@ func closePopup() {
     popupView = nil
     openPopup = nil
     openPopupDisplay = nil
+    popupAboveBounds = nil
 }
 
 // rows are rebuilt, not patched: the content is cheap to regenerate and a
@@ -2352,6 +2354,7 @@ func closePopup() {
 var popupTopY: CGFloat = 0
 var popupAnchorX: CGFloat = 0
 var popupAlignLeft = false
+var popupAboveBounds: (bottom: CGFloat, top: CGFloat)?
 
 func refreshPopup() {
     guard let name = openPopup, let view = popupView, let window = popupWindow else { return }
@@ -2362,7 +2365,12 @@ func refreshPopup() {
     var winH = size.height
     var x = popupAlignLeft ? popupAnchorX : popupAnchorX - size.width
     if let screen {
-        winH = min(size.height, popupTopY - screen.frame.minY - 20)
+        if let bounds = popupAboveBounds {
+            winH = min(size.height, bounds.top - bounds.bottom)
+            popupTopY = bounds.bottom + winH
+        } else {
+            winH = min(size.height, popupTopY - screen.frame.minY - 20)
+        }
         x = min(max(screen.frame.minX + 6, x), screen.frame.maxX - size.width - 6)
     }
     window.setFrame(NSRect(x: x, y: popupTopY - winH,
@@ -2400,6 +2408,7 @@ func showPopup(_ name: String, under anchor: NSRect, on surface: BarSurface, ali
     popupAlignLeft = alignLeft
     var winH = min(size.height, popupTopY - screen.frame.minY - 20)
     if let strip {
+        popupAboveBounds = (strip.maxY + 4, barBottom - 20)
         winH = min(size.height, barBottom - strip.maxY - 24)
         popupTopY = strip.maxY + 4 + winH
     }
@@ -2452,6 +2461,10 @@ func showPopup(_ name: String, under anchor: NSRect, on surface: BarSurface, ali
     popupView = view
     openPopup = name
     openPopupDisplay = screenID(screen)
+    if name == "proxy-speed" {
+        updateProxyGroups()
+        probeProxyGroups(includeAutomatic: true)
+    }
 }
 
 // --- popup content ---------------------------------------------------------
@@ -2757,6 +2770,7 @@ func popupRows(for name: String) -> [PopupRow] {
         return joined(calendarRows(), openMeteoConfigured() ? (openMeteoRows ?? []) : weatherRows())
     case "weather": return weatherRows()
     case "fission": return fissionRows()
+    case "proxy-speed": return proxyGroupRows()
     case "ai": return aiRows()
     case "brightness": return brightnessRows()
     // bluetooth follows the output devices so the pill can be hidden
@@ -3623,6 +3637,9 @@ final class BarView: NSView {
     // the left cluster's edge just before the media pill: what the lyric's
     // width budget is measured from. Set by draw(), read by clippedTitle.
     var mediaLeftEdge: CGFloat = 0
+    // the right cluster's width from the last settled frame: a centred media
+    // pill may grow until it meets either cluster
+    var rightClusterWidth: CGFloat = 0
 
     // Heights inside this display's bar follow ITS strip, so a release
     // — or a second display — that moves one does not leave them adrift.
@@ -3696,32 +3713,35 @@ final class BarView: NSView {
         return x + 6
     }
 
-    // A lyric may take everything between the pill's own left edge and the
-    // notch: leftBudget (auxiliaryTopLeftArea) minus where the pill starts,
+    // A lyric or title may take everything between the pill's own left edge and
+    // the notch: leftBudget (auxiliaryTopLeftArea) minus where the pill starts,
     // minus the pill's trailing padding, minus 2 pt so a rounding difference
-    // cannot push leftEdge past the notch. Capped at the left cluster's own
-    // width so a display without a notch cannot grow it without bound.
+    // cannot push leftEdge past the notch. Without a notch the pill is centred,
+    // so it may grow until either side meets its neighbouring cluster; the cap
+    // keeps a very wide display from growing it without bound.
     private func lyricWidthBudget(_ iconFont: NSFont) -> CGFloat {
-        let cap: CGFloat = 665
-        guard let surface, surface.notched else { return cap }
-        return min(cap, surface.notchLeft - (mediaLeftEdge + gap)
-                       - titleOffset(iconFont) - 10 - 2)
+        let cap: CGFloat = 1100
+        guard let surface else { return cap }
+        if surface.notched {
+            return min(cap, surface.notchLeft - (mediaLeftEdge + gap)
+                           - titleOffset(iconFont) - 10 - 2)
+        }
+        let half = bounds.width / 2 - max(mediaLeftEdge, rightClusterWidth) - gap * 2
+        return max(120, min(cap, 2 * half - titleOffset(iconFont) - 10 - 2))
     }
 
     // The synced lyric when the daemon has a fresh line for the track this
-    // pill is showing; otherwise the title, clipped exactly as upstream does.
+    // pill is showing; otherwise the title, clipped to the same budget.
     private var clippedTitle: String {
+        let budget = lyricWidthBudget(nerdFont("Bold", 14))
         if let lyric = currentLyric() {
-            let budget = lyricWidthBudget(nerdFont("Bold", 14))
             let clipped = clipToWidth(lyric, nerdFont("SemiBold", 13), budget)
             if !clipped.isEmpty {
                 lyricDrawn(clipped, budget: budget)
                 return clipped
             }
         }
-        let limit = (surface?.notched ?? false) ? 20 : 28
-        let title = model.media.title
-        return title.count <= limit ? title : String(title.prefix(limit - 1)) + "…"
+        return clipToWidth(model.media.title, nerdFont("SemiBold", 13), max(60, budget))
     }
 
     private func drawMedia(at origin: CGFloat, _ titleFont: NSFont, _ iconFont: NSFont) {
@@ -3891,7 +3911,7 @@ final class BarView: NSView {
                 name: name, item: item,
                 iconInk: hasIcon ? inkBox(item.icon, iconFont).width : 0,
                 innerGap: hasIcon && hasLabel ? 7 : 0,
-                labelAdv: name == "proxy-speed" ? proxySpeedWidth
+                labelAdv: name == "proxy-speed" ? proxySpeedWidth + proxyAIWarningWidth
                     : (hasLabel ? advance(item.label, labelFont) : 0))
             // only a run that is still adjacent HERE may share a background:
             // the loader guarantees it, and this keeps a stale group from
@@ -4013,6 +4033,12 @@ final class BarView: NSView {
 
         // one-shot in practice: the rects only move when a pill's width or the
         // item set does, so a steady bar logs this once (never mid-animation)
+        let settledRightWidth = itemRects.isEmpty ? padLeft : bounds.maxX - cursor - gap
+        if abs(settledRightWidth - rightClusterWidth) > 0.5 {
+            // the media pill was sized from the previous width: draw once more
+            rightClusterWidth = settledRightWidth
+            DispatchQueue.main.async { [weak self] in self?.needsDisplay = true }
+        }
         guard !motion.moving else { return }
         let rectLine = "right rects: " + rectLog.reversed().flatMap { $0 }.joined(separator: " ")
         if rectLine != lastRectLog {
@@ -4079,27 +4105,7 @@ final class BarView: NSView {
             return
         }
         if let part = mediaRects.first(where: { $0.1.contains(p) })?.0 {
-            closePopup()
-            if mediaSourceMPD {
-                tlog("media click \(part) -> mpd")
-                // no app to open: the title toggles too, which is the only
-                // click a `media-controls off` pill has
-                switch part {
-                case "prev": mpdSend("previous")
-                case "next": mpdSend("next")
-                default: mpdSend(model.media.playing ? "pause 1" : "pause 0")
-                }
-                return
-            }
-            switch part {
-            case "prev": spotify("previous track")
-            case "play": spotify("playpause")
-            case "next": spotify("next track")
-            default:
-                if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: spotifyBundleID) {
-                    NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
-                }
-            }
+            mediaControl(part)
             return
         }
         guard let name = hit(event), let rect = itemRects.first(where: { $0.0 == name })?.1 else {
@@ -4303,10 +4309,38 @@ func bottomModuleWidth(_ module: String) -> CGFloat {
     case "lyrics": return model.media.running && !model.media.title.isEmpty ? 400 : 0
     case "ai": return CGFloat(max(1, aiSegments().count)) * 384
     case "net": return 280
+    case "meta": return model.media.running && !model.media.title.isEmpty ? 190 : 0
+    case "controls": return model.media.running && !model.media.title.isEmpty ? 90 : 0
+    case "movers": return (fissionFund?.todayRows.isEmpty ?? true) ? 0 : 200
+    case "proxy": return rightItems["proxy-speed"] == nil ? 0 : 270
     case "fund":
         guard rightItems["fission"] != nil else { return 0 }
         return 300
     default: return 0
+    }
+}
+
+func mediaControl(_ part: String) {
+    closePopup()
+    if mediaSourceMPD {
+        tlog("media click \(part) -> mpd")
+        // no app to open: the title toggles too, which is the only
+        // click a `media-controls off` pill has
+        switch part {
+        case "prev": mpdSend("previous")
+        case "next": mpdSend("next")
+        default: mpdSend(model.media.playing ? "pause 1" : "pause 0")
+        }
+        return
+    }
+    switch part {
+    case "prev": spotify("previous track")
+    case "play": spotify("playpause")
+    case "next": spotify("next track")
+    default:
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: spotifyBundleID) {
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        }
     }
 }
 
@@ -4391,6 +4425,10 @@ final class AuxView: NSView {
             case "ai": drawAIModule(rect)
             case "net": drawNetModule(rect)
             case "fund": drawFundModule(rect)
+            case "meta": drawMetaModule(rect)
+            case "controls": drawControlsModule(rect)
+            case "movers": drawMoversModule(rect)
+            case "proxy": drawProxyModule(rect)
             default: break
             }
             hits.append((module.name, rect))
@@ -4477,7 +4515,11 @@ final class AuxView: NSView {
     // the last three minutes of proxy traffic, down and up, on one scale
     private func drawNetModule(_ rect: NSRect) {
         let textW: CGFloat = 80
-        let graph = NSRect(x: rect.minX, y: rect.minY + 6, width: rect.width - textW - 10,
+        if let warning = proxyAIWarning {
+            drawText(warning, proxySpeedFont, palette.red, leftAt: rect.minX, midY: rect.midY)
+        }
+        let graph = NSRect(x: rect.minX + proxyAIWarningWidth, y: rect.minY + 6,
+                           width: rect.width - textW - 10 - proxyAIWarningWidth,
                            height: rect.height - 12)
         palette.muted.withAlphaComponent(0.3).setFill()
         NSRect(x: graph.minX, y: graph.minY, width: graph.width, height: 1).fill()
@@ -4497,9 +4539,17 @@ final class AuxView: NSView {
         guard let f = fissionFund else { return }
         let tone = f.color == "up" ? palette.green : f.color == "down" ? palette.red : palette.muted
         let font = nerdFont("SemiBold", 13)
-        let amount = f.main
+        let amount = clipToWidth(f.main, font, rect.width)
         drawText(amount, font, tone, leftAt: rect.minX, midY: rect.midY)
-        let graphX = rect.minX + max(84, advance(amount, font) + 12)
+        var textEnd = rect.minX + advance(amount, font)
+        if let rate = f.todayRate {
+            let text = String(format: "%+.2f%%", rate)
+            if textEnd + 6 + advance(text, small) <= rect.maxX {
+                drawText(text, small, tone, leftAt: textEnd + 6, midY: rect.midY)
+                textEnd += 6 + advance(text, small)
+            }
+        }
+        let graphX = rect.minX + max(84, textEnd - rect.minX + 12)
         let graph = NSRect(x: graphX, y: rect.minY + 6, width: rect.maxX - graphX,
                            height: rect.height - 12)
         let values = f.recent.spark
@@ -4520,6 +4570,78 @@ final class AuxView: NSView {
             let endY = graph.minY + graph.height * CGFloat((last - low) / span)
             trendTone.setFill()
             NSBezierPath(ovalIn: NSRect(x: graph.maxX - 2, y: endY - 2, width: 4, height: 4)).fill()
+        }
+    }
+
+    private func drawMetaModule(_ rect: NSRect) {
+        let parts = model.media.title.components(separatedBy: " — ")
+        let name = parts.count > 1 ? parts.dropFirst().joined(separator: " — ") : model.media.title
+        let artist = parts.count > 1 ? parts[0] : ""
+        let nameFont = nerdFont("SemiBold", 12)
+        let nameColor = model.media.playing ? palette.label : secondary
+        let shownName = clipToWidth(name, nameFont, rect.width)
+        if artist.isEmpty {
+            drawText(shownName, nameFont, nameColor, leftAt: rect.minX, midY: rect.midY)
+        } else {
+            drawText(shownName, nameFont, nameColor, leftAt: rect.minX, midY: rect.midY + 6)
+            drawText(clipToWidth(artist, small, rect.width), small, secondary,
+                     leftAt: rect.minX, midY: rect.midY - 6)
+        }
+    }
+
+    private func drawControlsModule(_ rect: NSRect) {
+        let buttons = [("prev", "󰒮"), ("play", model.media.playing ? "󰏤" : "󰐊"),
+                       ("next", "󰒭")]
+        let step = rect.width / CGFloat(buttons.count)
+        for (index, button) in buttons.enumerated() {
+            let cell = NSRect(x: rect.minX + step * CGFloat(index), y: rect.minY, width: step, height: rect.height)
+            let active = button.0 == "play" && model.media.playing
+            drawIcon(button.1, nerdFont("Bold", button.0 == "play" ? 17 : 14),
+                     active ? palette.accent : palette.label, centeredIn: cell)
+            hits.append(("ctl:" + button.0, cell))
+        }
+    }
+
+    // today's best and worst funds, by today's rate
+    private func drawMoversModule(_ rect: NSRect) {
+        guard let rows = fissionFund?.todayRows,
+              let best = rows.max(by: { ($0.rate ?? 0) < ($1.rate ?? 0) }),
+              let worst = rows.min(by: { ($0.rate ?? 0) < ($1.rate ?? 0) }) else { return }
+        let picks = best.name == worst.name ? [best] : [best, worst]
+        for (index, line) in picks.enumerated() {
+            let rate = line.rate ?? 0
+            let tone = rate > 0.005 ? palette.green : rate < -0.005 ? palette.red : palette.muted
+            let y = picks.count == 1 ? rect.midY : rect.midY + (index == 0 ? 6 : -6)
+            let text = String(format: "%+.2f%%", rate)
+            drawText(rate >= 0 ? "▲" : "▼", small, tone, leftAt: rect.minX, midY: y)
+            drawText(clipToWidth(line.name, small, rect.width - advance(text, small) - 28), small,
+                     palette.label, leftAt: rect.minX + 14, midY: y)
+            drawText(text, small, tone, leftAt: rect.maxX - advance(text, small), midY: y)
+        }
+    }
+
+    // two rows of equal weight: the AI group's selected node and the node the
+    // automatic group currently uses, each with Clash's latest delay for it
+    private func drawProxyModule(_ rect: NSRect) {
+        let aiNodes = proxyGroups.first?.nodes ?? []
+        let rows: [(String, ProxyNodeStatus?, AIProxyHealth?)] = [
+            ("AI", aiNodes.first(where: \.selected) ?? aiNodes.first, aiProxyHealth),
+            ("自动", proxyGroups.last?.nodes.first, nil),
+        ]
+        let labelW = max(advance("AI", small), advance("自动", small)) + 8
+        for (index, row) in rows.enumerated() {
+            let y = rect.midY + (index == 0 ? 6 : -6)
+            let status = proxyDelayStatus(row.1, health: row.2)
+            let statusW = advance(status.text, small)
+            drawText(row.0, small, secondary, leftAt: rect.minX, midY: y)
+            drawText(status.text, small, palette[keyPath: status.tone], leftAt: rect.maxX - statusW, midY: y)
+            let name = row.1.map {
+                $0.name.replacingOccurrences(of: "\\{[^}]*\\}", with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespaces)
+            }
+            drawText(clipToWidth(name ?? proxyGroupsError ?? "—", small, rect.width - labelW - statusW - 10),
+                     small, name == nil ? palette.muted : palette.label,
+                     leftAt: rect.minX + labelW, midY: y)
         }
     }
 
@@ -4637,13 +4759,19 @@ final class AuxView: NSView {
             DispatchQueue.global(qos: .userInitiated).async { focusWorkspace(ws) }
             return
         }
+        if hit.hasPrefix("ctl:") {
+            mediaControl(String(hit.dropFirst(4)))
+            return
+        }
         let strip = kind == .bottom ? window?.frame : nil
         switch hit {
         case "ai":
             aiRenderRows()
             showPopup("ai", under: anchor, on: owner, alignLeft: true, above: strip)
-        case "fund":
+        case "fund", "movers":
             showPopup("fission", under: anchor, on: owner, alignLeft: true, above: strip)
+        case "net", "proxy":
+            showPopup("proxy-speed", under: anchor, on: owner, alignLeft: true, above: strip)
         case "lyrics":
             if mediaSourceMPD { mpdSend("pause") }
         case "volume", "wifi", "battery":
@@ -5653,6 +5781,12 @@ scheduleClock()
 Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { _ in updateWeather() }
 Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { _ in updateFissionFund() }
 Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in updateProxySpeed() }
+// the bottom strip's proxy node follows Clash's own failover, so it is re-read
+// from the local controller; it never triggers a delay test
+Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+    if activeLayout.bottom.contains("proxy") { updateProxyGroups() }
+}
+Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in probeProxyGroups(includeAutomatic: false) }
 // same 1800 s cadence bar_daemon.sh:147 used for Open-Meteo
 Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { _ in updateOpenMeteoWeather() }
 // codexbar walks the network with a 20 s timeout, so the fetch keeps the
@@ -5860,6 +5994,204 @@ let proxySpeedSession: URLSession = {
     return URLSession(configuration: config)
 }()
 
+let proxyProbeSession: URLSession = {
+    let config = URLSessionConfiguration.ephemeral
+    config.connectionProxyDictionary = [:]
+    config.timeoutIntervalForRequest = 8
+    config.timeoutIntervalForResource = 10
+    return URLSession(configuration: config)
+}()
+
+enum AIProxyHealth: String {
+    case checking, healthy, failed, unavailable
+}
+
+var aiProxyHealth = AIProxyHealth.checking
+var proxyProbeBusy = false
+var proxyProbeAutomaticQueued = false
+// A confirming probe that met a busy one: it runs after that one finishes.
+var proxyProbeConfirmQueued: Int?
+
+var proxyAIWarning: String? {
+    switch aiProxyHealth {
+    case .checking, .healthy: return nil
+    case .failed: return "AI !"
+    case .unavailable: return "AI ?"
+    }
+}
+
+var proxyAIWarningWidth: CGFloat {
+    proxyAIWarning.map { advance($0, proxySpeedFont) + 10 } ?? 0
+}
+
+// Delay text for one node. A confirmed AI failure or an unreadable AI status
+// overrides the recorded delay.
+func proxyDelayStatus(_ node: ProxyNodeStatus?, health: AIProxyHealth? = nil)
+    -> (text: String, tone: KeyPath<Palette, NSColor>) {
+    if health == .failed { return ("超时", \.red) }
+    if health == .unavailable { return ("?", \.muted) }
+    guard let node else { return ("—", \.muted) }
+    if node.alive == false || node.delay == 0 { return ("超时", \.red) }
+    guard let delay = node.delay else { return ("未测速", \.muted) }
+    return ("\(delay) ms", delay > 600 ? \.red : delay <= 250 ? \.green : \.label)
+}
+
+func setAIProxyHealth(_ health: AIProxyHealth) {
+    guard aiProxyHealth != health else { return }
+    aiProxyHealth = health
+    tlog("proxy AI health \(health.rawValue)")
+    repaint()
+}
+
+func aiProbeHealth(selected: String?, delays: [String: Int]?, status: Int?) -> AIProxyHealth {
+    guard let selected else { return .unavailable }
+    if status == 408 || status == 504 { return .failed }
+    guard status == 200, let delays else { return .unavailable }
+    return (delays[selected] ?? 0) > 0 ? .healthy : .failed
+}
+
+// A first AI failure schedules one confirming probe for the same node. Any
+// non-failure result advances `generation`, so a confirmation scheduled
+// earlier is discarded; a confirmation that finds a different node restarts.
+enum AIProbeOutcome: Equatable {
+    case apply(AIProxyHealth)
+    case retry(generation: Int)
+    case discard
+}
+
+struct AIFailureConfirmation {
+    var generation = 0
+    var node: String?
+
+    mutating func outcome(health: AIProxyHealth, node: String?, confirming: Int?,
+                          current: AIProxyHealth) -> AIProbeOutcome {
+        guard health == .failed else {
+            generation += 1
+            self.node = nil
+            return .apply(health)
+        }
+        if let confirming {
+            guard confirming == generation else { return .discard }
+            if self.node == node { return .apply(.failed) }
+        } else if current == .failed {
+            return .apply(.failed)
+        }
+        generation += 1
+        self.node = node
+        return .retry(generation: generation)
+    }
+}
+
+var aiFailureConfirmation = AIFailureConfirmation()
+
+func applyAIProbe(_ health: AIProxyHealth, node: String?, confirming: Int? = nil) {
+    switch aiFailureConfirmation.outcome(health: health, node: node, confirming: confirming,
+                                         current: aiProxyHealth) {
+    case .apply(let value): setAIProxyHealth(value)
+    case .discard: break
+    case .retry(let generation):
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            guard aiFailureConfirmation.generation == generation else { return }
+            probeProxyGroups(includeAutomatic: false, confirming: generation)
+        }
+    }
+}
+
+func proxyAPIURL(_ root: URL, _ components: [String], delayFor: Bool = false) -> URL {
+    var allowed = CharacterSet.urlPathAllowed
+    allowed.remove("/")
+    let path = components.map { $0.addingPercentEncoding(withAllowedCharacters: allowed) ?? $0 }.joined(separator: "/")
+    var url = URLComponents(url: root, resolvingAgainstBaseURL: false)!
+    url.percentEncodedPath = "/" + path
+    if delayFor {
+        url.queryItems = [
+            URLQueryItem(name: "url", value: "https://www.gstatic.com/generate_204"),
+            URLQueryItem(name: "timeout", value: "5000")
+        ]
+    }
+    return url.url!
+}
+
+// The AI group is tested every five minutes. The automatic group only tests
+// its currently selected node, and only when the proxy popup opens. A first
+// AI failure is retried once after 10 seconds before the pill shows it, so
+// one dropped probe does not raise a false alarm.
+func probeProxyGroups(includeAutomatic: Bool, confirming: Int? = nil) {
+    guard configuredValue("proxy-speed") == "on" else { return }
+    guard !proxyProbeBusy else {
+        proxyProbeAutomaticQueued = proxyProbeAutomaticQueued || includeAutomatic
+        if let confirming { proxyProbeConfirmQueued = confirming }
+        return
+    }
+    guard let (connectionsURL, secret) = proxySpeedController() else {
+        applyAIProbe(.unavailable, node: nil)
+        return
+    }
+    proxyProbeBusy = true
+    tlog("proxy health check started")
+    let root = connectionsURL
+    var request = URLRequest(url: proxyAPIURL(root, ["proxies"]))
+    request.setValue("Bearer " + secret, forHTTPHeaderField: "Authorization")
+    func finish() {
+        proxyProbeBusy = false
+        tlog("proxy health check finished")
+        updateProxyGroups()
+        guard proxyProbeAutomaticQueued || proxyProbeConfirmQueued != nil else { return }
+        let automatic = proxyProbeAutomaticQueued
+        let queuedConfirmation = proxyProbeConfirmQueued
+        proxyProbeAutomaticQueued = false
+        proxyProbeConfirmQueued = nil
+        probeProxyGroups(includeAutomatic: automatic, confirming: queuedConfirmation)
+    }
+    proxyProbeSession.dataTask(with: request) { data, response, error in
+        let object = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        guard error == nil, (response as? HTTPURLResponse)?.statusCode == 200,
+              let proxies = object?["proxies"] as? [String: [String: Any]] else {
+            DispatchQueue.main.async {
+                applyAIProbe(.unavailable, node: nil)
+                finish()
+            }
+            return
+        }
+        let groups = parseProxyGroups(proxies)
+        let aiName = proxyAIGroupName()
+        let ai = groups.first?.nodes.first(where: \.selected)
+        var targets: [(isAI: Bool, path: [String])] = []
+        if let ai {
+            // The group endpoint clears a Fallback or URLTest group's pinned
+            // choice, so only a Selector is tested as a group; anything else
+            // is tested through its current node.
+            let isSelector = proxies[aiName]?["type"] as? String == "Selector"
+            targets.append((true, isSelector ? ["group", aiName, "delay"] : ["proxies", ai.name, "delay"]))
+        } else {
+            DispatchQueue.main.async { applyAIProbe(.unavailable, node: nil, confirming: confirming) }
+        }
+        if includeAutomatic, let current = groups.last?.nodes.first?.name {
+            targets.append((false, ["proxies", current, "delay"]))
+        }
+        let pending = DispatchGroup()
+        for target in targets {
+            var probe = URLRequest(url: proxyAPIURL(root, target.path, delayFor: true))
+            probe.setValue("Bearer " + secret, forHTTPHeaderField: "Authorization")
+            pending.enter()
+            proxyProbeSession.dataTask(with: probe) { data, response, error in
+                if target.isAI, let ai {
+                    let json = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+                    // a group test answers with one delay per direct member, a node test with one delay
+                    let delays: [String: Int]? = target.path.first == "group"
+                        ? json?.compactMapValues { ($0 as? NSNumber)?.intValue }
+                        : (json?["delay"] as? NSNumber).map { [ai.key: $0.intValue] }
+                    let status = error == nil ? (response as? HTTPURLResponse)?.statusCode : nil
+                    let health = aiProbeHealth(selected: ai.key, delays: delays, status: status)
+                    DispatchQueue.main.async { applyAIProbe(health, node: ai.name, confirming: confirming) }
+                }
+                pending.leave()
+            }.resume()
+        }
+        pending.notify(queue: .main) { finish() }
+    }.resume()
+}
+
 func proxySpeedController() -> (URL, String)? {
     let path = NSHomeDirectory() + "/Library/Application Support/io.github.clash-verge-rev.clash-verge-rev/config.yaml"
     guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return nil }
@@ -5890,6 +6222,110 @@ func proxySpeedController() -> (URL, String)? {
     return (url, values["secret"] ?? "")
 }
 
+struct ProxyNodeStatus: Equatable {
+    var key: String // the group's own member name; delay results are keyed by it
+    var name: String // the node at the end of any nested groups
+    var delay: Int?
+    var alive: Bool?
+    var selected: Bool
+}
+
+struct ProxyGroupStatus: Equatable {
+    var name: String
+    var nodes: [ProxyNodeStatus]
+}
+
+var proxyGroups: [ProxyGroupStatus] = []
+var proxyGroupsBusy = false
+var proxyGroupsError: String?
+
+func proxyAIGroupName() -> String {
+    configuredValues("proxy-ai-group")?.joined(separator: " ") ?? "AI"
+}
+
+// The AI group is `proxy-ai-group` (default AI). The automatic group is
+// `proxy-auto-group`, or else the first Fallback group by name.
+func parseProxyGroups(_ proxies: [String: [String: Any]]) -> [ProxyGroupStatus] {
+    let ai = proxyAIGroupName()
+    let automatic = configuredValues("proxy-auto-group")?.joined(separator: " ")
+        ?? proxies.keys.sorted().first { proxies[$0]?["type"] as? String == "Fallback" }
+    let specs: [(String, String?, Bool)] = [(ai, ai, false), ("自动 · 当前节点", automatic, true)]
+    return specs.map { title, key, currentOnly in
+        let group = key.flatMap { proxies[$0] } ?? [:]
+        let current = group["now"] as? String
+        let nodes = (group["all"] as? [String] ?? []).map { name in
+            var leaf = name
+            var visited = Set<String>()
+            while visited.insert(leaf).inserted, let next = proxies[leaf]?["now"] as? String {
+                leaf = next
+            }
+            let node = proxies[leaf] ?? [:]
+            let last = (node["history"] as? [[String: Any]])?.last
+            return ProxyNodeStatus(key: name, name: leaf, delay: (last?["delay"] as? NSNumber)?.intValue,
+                                   alive: node["alive"] as? Bool, selected: name == current)
+        }.filter { !currentOnly || $0.selected }
+        return ProxyGroupStatus(name: title, nodes: nodes)
+    }
+}
+
+func proxyGroupRows() -> [PopupRow] {
+    if let error = proxyGroupsError {
+        return [PopupRow(text: "代理", hero: true), PopupRow(text: error, dim: true)]
+    }
+    guard !proxyGroups.isEmpty else {
+        return [PopupRow(text: "代理", hero: true), PopupRow(text: "读取中…", dim: true)]
+    }
+    var rows: [PopupRow] = []
+    for group in proxyGroups {
+        if !rows.isEmpty { rows.append(PopupRow(rule: true)) }
+        rows.append(PopupRow(text: group.name, hero: true))
+        if group.nodes.isEmpty {
+            rows.append(PopupRow(text: "未找到节点", dim: true))
+        }
+        for node in group.nodes {
+            let detail: String
+            if node.alive == false || node.delay == 0 { detail = "超时" }
+            else if let delay = node.delay { detail = "\(delay) ms" }
+            else { detail = "未测速" }
+            rows.append(PopupRow(icon: node.selected ? "✓" : " ", text: node.name,
+                                 detail: detail, highlight: node.selected, iconColumn: 18))
+        }
+    }
+    return rows
+}
+
+func updateProxyGroups() {
+    guard !proxyGroupsBusy else { return }
+    guard let (connectionsURL, secret) = proxySpeedController() else {
+        proxyGroups = []
+        proxyGroupsError = "Clash Verge 未连接"
+        if openPopup == "proxy-speed" { refreshPopup() }
+        return
+    }
+    proxyGroupsBusy = true
+    let url = connectionsURL.deletingLastPathComponent().appendingPathComponent("proxies")
+    var request = URLRequest(url: url)
+    request.setValue("Bearer " + secret, forHTTPHeaderField: "Authorization")
+    proxySpeedSession.dataTask(with: request) { data, response, error in
+        let object = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        let proxies = object?["proxies"] as? [String: [String: Any]]
+        let status = (response as? HTTPURLResponse)?.statusCode
+        let groups = proxies.map(parseProxyGroups)
+        DispatchQueue.main.async {
+            proxyGroupsBusy = false
+            let ok = error == nil && status == 200 && groups != nil
+            let nextGroups = ok ? groups! : []
+            let nextError: String? = ok ? nil
+                : status == 401 ? "Clash Verge 认证失败" : "Clash Verge 未连接"
+            guard proxyGroups != nextGroups || proxyGroupsError != nextError else { return }
+            proxyGroups = nextGroups
+            proxyGroupsError = nextError
+            repaint()
+            if openPopup == "proxy-speed" { refreshPopup() }
+        }
+    }.resume()
+}
+
 let proxySpeedFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
 // The unit steps from KB/s to MB/s, so five characters of figure cover any
 // link and the pill keeps one width.
@@ -5906,18 +6342,23 @@ func proxySpeedRate(_ bytes: Double) -> String {
 func drawProxySpeed(_ item: BarItem, x: CGFloat, midY: CGFloat) {
     let values = item.label.components(separatedBy: "\n")
     let idle = palette.label.withAlphaComponent(0.5)
+    if let warning = proxyAIWarning {
+        drawText(warning, proxySpeedFont, palette.red, leftAt: x, midY: midY)
+    }
+    let speedX = x + proxyAIWarningWidth
     for (index, arrow) in ["↑", "↓"].enumerated() {
         let y = midY + (index == 0 ? 6 : -6)
         let value = values.indices.contains(index) ? values[index] : "—"
         let live = value != "—" && value != "0 KB/s"
-        drawText(arrow, proxySpeedFont, live ? palette.accent : idle, leftAt: x, midY: y)
+        drawText(arrow, proxySpeedFont, live ? palette.accent : idle, leftAt: speedX, midY: y)
         drawText(value, proxySpeedFont, live ? palette.label : idle,
-                 leftAt: x + proxySpeedWidth - advance(value, proxySpeedFont), midY: y)
+                 leftAt: speedX + proxySpeedWidth - advance(value, proxySpeedFont), midY: y)
     }
 }
 
 func updateProxySpeed() {
     guard configuredValue("proxy-speed") == "on", !proxySpeedBusy else { return }
+    if openPopup == "proxy-speed" { updateProxyGroups() }
     func offline() {
         proxySpeedPrevious = nil
         set("proxy-speed") { $0.label = "—\n—" }
@@ -5975,6 +6416,8 @@ struct FissionFund {
     var rows: [FundLine] = []
     var recent = FundLine(name: "近0日", total: true)
     var dates: [String] = []
+    var todayRows: [FundLine] = []
+    var todayRate: Double?
 }
 
 var fissionFund: FissionFund?
@@ -6035,6 +6478,14 @@ func fissionParse(_ o: [String: Any]) -> FissionFund {
                         rate: ($0["rate"] as? NSNumber)?.doubleValue,
                         profit: ($0["profit"] as? NSNumber)?.doubleValue,
                         spark: ($0["spark"] as? [NSNumber] ?? []).map(\.doubleValue))
+    }
+    if ok, Double(f.main) != nil {
+        f.todayRate = (o["totalRate"] as? NSNumber)?.doubleValue
+        f.todayRows = (o["displayRows"] as? [[String: Any]] ?? []).compactMap {
+            guard $0["today"] as? Bool == true, let name = $0["name"] as? String,
+                  let rate = ($0["rate"] as? NSNumber)?.doubleValue else { return nil }
+            return FundLine(name: name, rate: rate, profit: ($0["profit"] as? NSNumber)?.doubleValue)
+        }
     }
     return f
 }
@@ -7543,6 +7994,7 @@ updateWifi()
 updateWeather()
 updateFissionFund()
 updateProxySpeed()
+probeProxyGroups(includeAutomatic: false)
 updateOpenMeteoWeather()
 updateAIUsage()
 updateAirPods()

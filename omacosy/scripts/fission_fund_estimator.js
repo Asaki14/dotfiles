@@ -544,6 +544,7 @@ async function main() {
       color: row.color,
       rate: row.rate,
       profit: row.profit,
+      today: usable.includes(row),
       spark: []
     })).slice(0, 16);
 

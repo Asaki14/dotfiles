@@ -296,13 +296,30 @@ next theme switch, which resets the bar to the theme's `layout`.
 | Layout | Adds | Moves off the top bar |
 |---|---|---|
 | `classic` | nothing | nothing |
-| `music` | a bottom strip with the lyric line and progress | media |
-| `market` | a bottom strip with recent cumulative fund returns and a net-speed sparkline | fund, net speed |
+| `music` | a bottom strip with playback controls, title and artist, and the lyric line with progress | media |
+| `market` | a bottom strip with today's fund profit and rate, the 20-day curve, today's best and worst funds, the automatic proxy group's current node with its delay, and net speed | fund, net speed |
 | `studio` | a bottom strip with AI, lyrics, net speed and fund | those four |
 | `zen` | a left capsule with workspaces, AI, status and clock | the whole top bar |
 
 The `studio` bottom strip sits flush with the screen's bottom edge.
 Bottom-strip net speed uses the theme accent for upload and neutral text for download.
+Clicking the upload/download pill or graph opens a read-only popup with the AI
+group (`proxy-ai-group`, default `AI`) and the current node of the automatic
+fallback group (`proxy-auto-group`, default the first Fallback group by name).
+A Selector AI group is tested as a group; any other type is tested through its
+current node, because the group test would clear a pinned choice.
+It shows the latest delay recorded by Clash, or timeout/untested status.
+Throughput updates every 2 seconds. The bar tests the `AI` group every 300 seconds,
+including while the popup is closed, and tests it again together with the
+automatic group's current node each time the popup opens, using Google's
+`generate_204` endpoint with a 5-second timeout. The automatic group is never
+tested on a timer, and the bar does not select nodes; Clash's own failover policy
+still applies. The pill shows `AI !` if the selected AI node fails twice in a row
+10 seconds apart, or `AI ?` if its status cannot be checked; healthy nodes add no
+label. In the `market` layout the proxy module shows the AI group's selected node and
+the automatic group's current node as two equal rows, each with its latest delay.
+These checks test proxy connectivity, not
+AI service availability, quotas or model access.
 Workspace indicators settle in 0.14 seconds. Bar animations follow the display's
 refresh cadence; continuous content keeps its own lower update rate, and the
 refresh callback stops when the bar is idle.
