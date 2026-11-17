@@ -59,11 +59,9 @@ Pane layouts within a Tern window.
 
 ![Real desktop recording of five themes, yazi, rmpc, dooit and four pane layouts](assets/desktop-demo.gif)
 
-[Watch the 59-second recording (MP4)](assets/desktop-demo.mp4)
+[Watch the recording (MP4)](assets/desktop-demo.mp4)
 
 </details>
-
-Notifications and fund readouts are masked.
 
 ## Features
 

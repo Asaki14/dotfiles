@@ -59,11 +59,9 @@ Tern 窗口内的窗格布局。
 
 ![真实桌面实录：5 套主题、yazi、rmpc、dooit 与 4 种窗格布局](assets/desktop-demo.gif)
 
-[观看 59 秒录屏（MP4）](assets/desktop-demo.mp4)
+[观看录屏（MP4）](assets/desktop-demo.mp4)
 
 </details>
-
-通知和基金数据已遮挡。
 
 ## 功能
 
