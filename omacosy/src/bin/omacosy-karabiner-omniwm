@@ -96,6 +96,7 @@ rules = slot_rules + [
     # no music app: omacosy-tab lands on the terminal's rmpc tab (Tern's or herdr's)
     rule("music", "s", SHIFT, cmd=f"{home}/.local/bin/omacosy-tab music rmpc"),
     rule("news", "n", SHIFT, cmd="open 'http://localhost:8088/'"),
+    rule("agent", "a", SHIFT, cmd=f"{home}/.local/bin/omacosy-tab Agent"),
     rule("dooit", "d", SHIFT, cmd=f"{home}/.local/bin/omacosy-tab dooit dooit"),
     rule("yazi", "y", SHIFT, cmd=f"{home}/.local/bin/omacosy-tab yazi yazi"),
     rule("research", "r", SHIFT, cmd=f"{home}/.local/bin/omacosy-tab 调研"),

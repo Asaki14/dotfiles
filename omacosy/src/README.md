@@ -461,6 +461,7 @@ on re-runs and names such keyboards when it finds one connected.
 | `Super+shift+f` | Lark (feishu). OmniWM keeps `Super+shift+f` for files: a NEW Finder window on every press |
 | `Super+shift+s` | music: the `music` tab running rmpc, in `TERMINAL` (`omacosy-tab`: Tern's own tabs, else herdr's) |
 | `Super+shift+n` | news: open FreshRSS in the browser (Tailscale must be connected) |
+| `Super+shift+a` | Agent: return to the `Agent` session in Tern, preserving its selected tab and block; never creates a session |
 | `Super+shift+d` | dooit: a tab titled `dooit …`, else a new `dooit` tab running dooit, in `TERMINAL` (`omacosy-tab`) |
 | `Super+shift+y` | yazi: a tab titled `yazi …`, else a new `yazi` tab running yazi, in `TERMINAL` (`omacosy-tab`) |
 | `Super+shift+r` / `Super+shift+u` / `Super+shift+g` | the `调研` / `UI` / `需求` tab in `TERMINAL` (`omacosy-tab`; never created). OmniWM keeps `Super+shift+g` for Messenger |

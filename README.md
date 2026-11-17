@@ -1,6 +1,6 @@
 <div align="center">
   <h1>dotfiles</h1>
-  <p><b>macOS dotfiles for an omarchy-style tiling desktop, terminal tools, local music and a self-hosted news reader.</b></p>
+  <p><b>An omarchy-style macOS desktop with shared themes, keyboard navigation, tiling windows and terminal tools.</b></p>
   <p>English · <a href="README.zh-CN.md">中文</a></p>
   <img src="https://img.shields.io/badge/macOS-26_Tahoe-black?style=flat-square&logo=apple" alt="macOS 26">
   <a href="https://github.com/Asaki14/dotfiles/commits"><img src="https://img.shields.io/github/last-commit/Asaki14/dotfiles?style=flat-square" alt="Last commit"></a>
@@ -8,6 +8,15 @@
 </div>
 
 ![The Osaka Jade desktop with Neovim, dooit and yazi in a transparent three-pane Tern workspace](assets/layouts/three-pane.jpg)
+
+Built on [omacosy](https://github.com/paulsp94/omacosy), this setup brings window management, the status bar and everyday terminal tools under shared themes and shortcuts.
+
+| Feature | In daily use |
+|---|---|
+| Shared appearance | Switch the wallpaper, bars and supported app palettes together |
+| Keyboard navigation | Switch workspaces, move windows and jump straight to tools |
+| Native status bar | Weather, AI quota, network speed, lyrics and fund estimates in one place |
+| Terminal workspace | Use the editor, files, tasks and music separately or in split panes |
 
 ## Themes
 
@@ -63,106 +72,121 @@ Pane layouts within a Tern window.
 
 </details>
 
-## Features
+## Everyday use
 
-- **Tiling desktop**: based on [omacosy](https://github.com/paulsp94/omacosy), with AeroSpace, a native status bar, borders, gestures and themes. Source and local changes are in `omacosy/src`
-- **Status bar data**: weather, AI quota, synced lyrics, net speed and an intraday fund estimate
-- **Local music**: beets keeps the library, MPD plays it, rmpc is the player, and a Swift bridge puts MPD on macOS Now Playing and the media keys
-- **News reader**: FreshRSS in Docker with a reader extension that translates articles in the background
-- **Terminal and editor**: fish, Neovim (lazy.nvim), yazi with plugins, btop
-- **Input that follows the pane**: a Tern plugin switches the macOS input source per terminal pane
-- **System actions**: lock, sleep, appearance and weather as [Tinycast](https://tinycast.dev) script commands
+AeroSpace manages desktop windows by default, with one or more apps per workspace. The split layouts in the screenshots are panes inside Tern, not a required desktop layout.
 
-## Quick Start
+In Tern, you can manually create two sessions to group your tabs:
+
+| Session name | Contents | Return to it |
+|---|---|---|
+| `Agent` | Tabs running omp | `Super+Shift+A` restores the last tab and focus without creating a session |
+| `Tools` | Separate tabs for rmpc, yazi and dooit | Each tool has its own global shortcut |
+
+Start the tools, then use the shortcuts below to jump back. The music, file and task shortcuts find an existing tab or create one running the tool if none exists.
+
+### Common shortcuts
+
+`Super` means holding Caps Lock, which sends `Cmd+Ctrl+Option`, not Cmd alone. These shortcuts describe the default AeroSpace setup.
+
+| Shortcut | Action |
+|---|---|
+| `Super+Enter` / `Super+Shift+Enter` | Focus the terminal, launching it if needed / open the default browser |
+| `Super+Shift+A` | Return to Tern's `Agent` session |
+| `Super+Shift+S` | Music: rmpc |
+| `Super+Shift+Y` | Files: yazi |
+| `Super+Shift+D` | Tasks: dooit |
+| `Super+Shift+L` | Notes: Logseq |
+| `Super+Shift+T` / `Super+Shift+B` | Next theme / next wallpaper |
+| `Super+Shift+Q` | Lock the screen |
+| `Super+K` | Show the shortcut cheatsheet |
+
+| Shortcut | Windows and workspaces |
+|---|---|
+| `Super+1` through `Super+9` | Switch workspaces on the current display |
+| `Super+Tab` / `Super+Shift+Tab` | Next / previous workspace |
+| `Super+Arrow` | Focus the window in that direction |
+| `Super+Shift+Arrow` | Move the window |
+| `Super+Shift+1` through `Super+Shift+9` | Move the window to that workspace and follow it |
+| `Super+F` | Enlarge the window within its workspace, keeping the bar and outer gaps |
+| `Super+W` | Close the window |
+
+See [omacosy's keybindings](omacosy/src/README.md#keybindings--super--hold-caps-lock) for the full list and OmniWM differences.
+
+## Install on your Mac
+
+The desktop was developed for macOS 26 Tahoe; compatibility with older macOS releases is not guaranteed. Install [Homebrew](https://brew.sh) and Xcode Command Line Tools (`xcode-select --install`) first.
+
+The screenshots use [Tern](https://stencil.so/tern), which is currently in closed beta and is not installed by this setup. Ghostty is the default terminal. You can install the desktop without Tern, but its appearance and session workflow will differ from the screenshots.
+
+**Installation changes macOS defaults, loads LaunchAgents, compiles helpers, sets the wallpaper and replaces configuration files.** Replaced files go to `~/.dotfiles-backup/<time>/`; file backups do not undo system settings. See the [omacosy installation guide](omacosy/src/README.md) for permissions and removal.
+
+### 1. Download and preview
+
+Do not overwrite an existing `~/.config`. The installer links the selected configuration directories into it.
 
 ```bash
-git clone https://github.com/Asaki14/dotfiles.git ~/.config
-cd ~/.config && ./install.sh
+git clone https://github.com/Asaki14/dotfiles.git ~/.local/share/dotfiles
+cd ~/.local/share/dotfiles
+./install.sh --dry-run
 ```
 
-If `~/.config` already exists, clone anywhere else: `install.sh` then links each config directory into `~/.config` and moves what it replaces to `~/.dotfiles-backup/<time>/`.
+If you already have Tern installed, select it before installing the desktop:
+
+```bash
+printf 'TERMINAL=Tern\n' > omacosy/src/config/apps.local.conf
+```
+
+This file is gitignored. You can override other default apps here too; see the fields in [apps.conf](omacosy/src/config/apps.conf).
+
+### 2. Install
+
+```bash
+./install.sh
+```
+
+By default, this installs the AeroSpace desktop and the packages and configurations for all repository modules, including optional tools not covered on this page. An existing installation keeps its chosen window manager.
 
 | Option | Effect |
 |---|---|
-| `--modules yazi,fish` | Only these config directories and the packages they need; the desktop runs only when `omacosy` is listed |
-| `--dry-run` | Print every action, change nothing |
-| `--no-brew` | Skip the Homebrew packages in `Brewfile` |
-| `--no-desktop` | Skip the omacosy desktop (window manager, bar, themes) |
-| `--no-network` | Do not look up the city from the IP address |
+| `--modules omacosy,karabiner,fish,yazi` | Install only the listed modules and dependencies; the desktop runs only when `omacosy` is listed |
+| `--no-desktop` | Install tool configurations without running the desktop installer |
+| `--no-brew` | Skip the top-level `Brewfile`, not the desktop installer's own dependencies |
+| `--no-network` | Skip the install-time IP city lookup, not later network access such as weather |
+| `--dry-run` | Print installation actions without changing files |
 
-`install.sh` writes machine-specific settings to these gitignored files:
+### 3. Grant permissions and set up your tools
 
-| File | Detected from |
+Follow the installation prompts in System Settings → Privacy & Security:
+
+| Permission | Purpose |
 |---|---|
-| `omacosy/bar-items.local.conf` | The paired AirPods or headphones, whose battery the bar shows |
-| `omacosy/scripts/location.local.json` | The city of your IP address (ip-api.com), for the weather |
-| `omacosy/scripts/fission_fund_wallet.json` | Copied from the example; list your fund codes and shares, or drop `fission-estimator` from `bar-items.conf` |
+| Accessibility | AeroSpace and desktop helpers manage windows |
+| Input Monitoring | Karabiner provides the Super key; the gesture helper reads the trackpad |
+| Bluetooth, Location, Automation | Bar device information, Wi-Fi names and system actions, as needed |
 
-## Before installing
+If Caps Lock does nothing, enable **Modify events** for your keyboard in Karabiner-Elements → Settings → Devices. See [omacosy's permissions guide](omacosy/src/README.md#permissions) for the complete list.
 
-- [Tern](https://stencil.so/tern) is in closed beta; install it yourself. The AI quota and article translation use [omp](https://github.com/can1357/oh-my-pi), which you install and log in to yourself.
-- FreshRSS and Tinycast are set up by hand: see [FreshRSS](#freshrss) and [Tinycast](#tinycast) below.
-- The omacosy installer changes macOS defaults, loads LaunchAgents, compiles helpers, sets the wallpaper and overwrites desktop configuration. File backups do not undo system settings. Read [omacosy/src/README.md](omacosy/src/README.md) first, or pass `--no-desktop`.
-- API keys go in `fish/conf.d/api_keys.local.fish`, which is gitignored.
-
-## What's Inside
-
-| Path | What it is |
+| Optional setup | Location or action |
 |---|---|
-| `omacosy/src/` | The desktop: bar, window manager config, themes and their installer. `UPSTREAM` records the upstream commit it is based on |
-| `omacosy/` | Bar layout (`bar-items.conf`) and its data scripts: weather, AI usage, lyrics, fund estimate |
-| `fish/` `nvim/` `yazi/` `btop/` | Shell, editor, file manager and system monitor |
-| `mpd/` `rmpc/` `beets/` | Music library, playback, playlists and the Now Playing bridge |
-| `freshrss/` | FreshRSS compose file, reader extension and translation worker |
-| `tern/plugins/` `tinycast/scripts/` | Tern terminal plugin and Tinycast system commands |
-| `karabiner/` `linearmouse/` | Keyboard and mouse |
+| AI sessions and quota | Install and log in to [omp](https://github.com/can1357/oh-my-pi), then create an `Agent` session |
+| Tasks | Install [dooit](https://github.com/kraanzu/dooit) separately; it is not included in the installer |
+| Local music | Adjust `~/Music/lib` in `mpd/mpd.conf` and `beets/config.yaml`, start MPD, then run rmpc |
+| Media keys and Now Playing | Run `sh ~/.config/mpd/nowplaying/install.sh` |
+| Bar contents | Edit `omacosy/bar-items.conf` to remove unwanted data items |
+| Machine-specific data | Headphones and city are detected; fill in `omacosy/scripts/fission_fund_wallet.json` for fund holdings |
 
-Paths that differ per machine but are not detected: the music library (`~/Music/lib` in `mpd/mpd.conf` and `beets/config.yaml`) and the `omp` binary (`freshrss/reader-settings.json`).
+Machine-specific data files are gitignored. Put API keys in the ignored `fish/conf.d/api_keys.local.fish`, not in public configuration.
 
-## FreshRSS
+## Configuration locations
 
-A local FreshRSS (`127.0.0.1:8088`, feeds update at minutes 7 and 37) whose `LocalReader` extension shows foreign-language articles in Chinese, with `查看原文` for the original. `reader.py` translates them in the background through omp with the model in `reader-settings.json`, so article text goes to that provider. The Mac must be awake.
-
-```sh
-colima start
-docker-compose -f ~/.config/freshrss/compose.yaml up -d
-open http://localhost:8088/              # create the admin user; it becomes the default user
-~/.config/freshrss/install-reader.sh     # LaunchAgent local.freshrss.reader, every 30 s
-```
-
-| Task | Command or place |
+| Path | Contents |
 |---|---|
-| Refresh feeds now | `docker exec --user www-data freshrss cli/actualize-user.php --user <user>` |
-| Run the translator now | `launchctl kickstart gui/$(id -u)/local.freshrss.reader` |
-| Translator log | `freshrss/reader-data/worker.log` |
-| Back up | Docker volumes `freshrss_freshrss_data`, `freshrss_freshrss_extensions` and `freshrss/reader-data/`; `down -v` deletes the volumes |
-| Other devices | `tailscale serve --bg --https=8443 http://127.0.0.1:8088` |
+| [`omacosy/src/`](omacosy/src/) | Desktop source, themes, shortcuts and installer |
+| [`omacosy/bar-items.conf`](omacosy/bar-items.conf) | Status bar layout |
+| [`omacosy/scripts/`](omacosy/scripts/) | Weather, AI quota, lyrics and fund estimates |
+| `fish/`, `nvim/`, `yazi/`, `btop/` | Shell, editor, file manager and system monitor |
+| `mpd/`, `rmpc/`, `beets/` | Local music and library |
+| `karabiner/`, `linearmouse/` | Keyboard and mouse |
 
-Tests: `cd freshrss && uv run --with beautifulsoup4 --with lxml_html_clean --with markdown --with markdownify --with readability-lxml python -m unittest -v test_reader`
-
-## Tinycast
-
-Import once per machine: Tinycast Settings → Commands → enable custom commands → Import → choose `~/.config/tinycast/scripts`. The imported commands run the scripts in place, so keep the directory. Turn on "Show output" for Weather; it runs on demand.
-
-| Command | Does | First-run permission |
-|---|---|---|
-| Toggle Appearance | Switches dark / light | Automation → System Events |
-| Weather | Current weather for `omacosy/scripts/location.local.json` | none |
-| Lock Screen | Sends ⌃⌘Q, which locks at once regardless of the screen-lock grace period | Accessibility |
-| Sleep | `pmset sleepnow`, after a confirmation | none |
-
-## Tern input source
-
-`tern/plugins/input-source-policy` switches the macOS input source when focus moves between Tern panes: agent blocks get the last CJK source (Rime by default), panes titled `yazi`, `dooit` or `rmpc` and everything else get US Extended. A switch happens only when the focused pane or its class changes and has held for 700 ms, so a manual switch inside a pane sticks.
-
-```sh
-tern plugin link ~/.config/tern/plugins/input-source-policy   # install.sh runs this
-tern/plugins/input-source-policy/scripts/input-source-policy status
-```
-
-The ASCII app list is `ASCII_APPS` in `window.luau`. Each switch is logged to `~/.local/state/tern-input-source-policy/policy.log`.
-
-## Notes
-
-- `AGENTS.md` describes how the pieces talk to each other.
-- Licensed under [MIT](LICENSE). omacosy keeps its own license in `omacosy/src/LICENSE`.
+Licensed under [MIT](LICENSE). omacosy's license is in [omacosy/src/LICENSE](omacosy/src/LICENSE).

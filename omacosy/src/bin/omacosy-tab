@@ -10,9 +10,8 @@
 # A label matches <name> when it is <name> itself or starts with `<name> ` (a
 # shell title such as `dooit ~/firstmate`).
 # Tern: a tab named <name>, else a tab with a block titled <name> or after the
-# command's program (fish titles a running `rmpc` as `rmpc ~`), else the first
-# tab of a session named <name>.
-# The omp target focuses the first block whose live title contains `OMP:`.
+# command's program (fish titles a running `rmpc` as `rmpc ~`), else switch
+# to a session named <name>, preserving its selected tab and block.
 # herdr: a tab labelled <name>, also as herdr-auto-title's
 # `<position> · <name>[ › …]`, else the first tab of a workspace labelled
 # <name>: an agent tab is titled after the agent (`1 · omp › …`), so only its
@@ -42,19 +41,25 @@ except (ValueError, KeyError, TypeError):
 def matches(label, word):
     return bool(word) and isinstance(label, str) and (label == word or label.startswith(word + " "))
 tabs = [t for s in sessions for t in s["tabs"] if t["blocks"]]
-if name == "omp":
-    block = next((b for t in tabs for b in t["blocks"] if "OMP:" in (b["title"] or "")), None)
-    if block:
-        print(block["id"])
-    sys.exit(0)
 tab = (next((t for t in tabs if matches(t["name"], name)), None)
        or next((t for t in tabs for b in t["blocks"]
-                if matches(b["title"], name) or matches(b["title"], program)), None)
-       or next((t for s in sessions if s["name"] == name for t in s["tabs"] if t["blocks"]), None))
+                if matches(b["title"], name) or matches(b["title"], program)), None))
 if tab:
     print(next((b["id"] for b in tab["blocks"] if b["focused"]), tab["blocks"][0]["id"]))
+else:
+    session = next((s for s in sessions if s["name"] == name), None)
+    if session:
+        block = next((b for t in session["tabs"] for b in t["blocks"]), None)
+        if block:
+            print("session:" + str(block["id"]))
 ' "$name" "${cmd%% *}")
 
+  if [[ "$block" == session:* ]]; then
+    # Route ctl through a pane in the target window, including from global hotkeys.
+    TERN_PANE_SOCKET="${TERN_PANE_SOCKET:-${TERN_DAEMON_SOCKET:-${TERN_CONFIG_DIR:-$HOME/Library/Application Support/Tern}/daemon.sock}}" \
+      TERN_PANE="${block#session:}" tern ctl session switch "$name" >/dev/null
+    return
+  fi
   if [ -n "$block" ]; then
     tern focus "$block" >/dev/null
     return

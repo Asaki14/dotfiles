@@ -228,5 +228,4 @@ cat <<'NEXT'
   Optional, by hand:
     sh ~/.config/mpd/nowplaying/install.sh       # MPD on macOS Now Playing and the media keys
     ~/.config/mpd/playlist-sync                   # link playlists for MPD, fetch missing songs
-    see "FreshRSS" and "Tinycast" in ~/.config/README.md
 NEXT

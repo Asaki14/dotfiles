@@ -1,6 +1,6 @@
 <div align="center">
   <h1>dotfiles</h1>
-  <p><b>omarchy 风格的 macOS 配置，包含平铺桌面、终端工具、本地音乐和自托管新闻阅读器。</b></p>
+  <p><b>omarchy 风格的 macOS 桌面：统一配色、键盘操作、平铺窗口与终端工具。</b></p>
   <p><a href="README.md">English</a> · 中文</p>
   <img src="https://img.shields.io/badge/macOS-26_Tahoe-black?style=flat-square&logo=apple" alt="macOS 26">
   <a href="https://github.com/Asaki14/dotfiles/commits"><img src="https://img.shields.io/github/last-commit/Asaki14/dotfiles?style=flat-square" alt="Last commit"></a>
@@ -8,6 +8,15 @@
 </div>
 
 ![Osaka Jade 真实桌面：透明 Tern 三窗格中的 Neovim、dooit 和 yazi](assets/layouts/three-pane.jpg)
+
+这套配置基于 [omacosy](https://github.com/paulsp94/omacosy)，把窗口管理、状态栏和常用终端工具放在同一套主题与快捷键下。
+
+| 特点 | 日常体验 |
+|---|---|
+| 统一外观 | 一次切换壁纸、状态栏及支持的 App 配色 |
+| 键盘操作 | 切工作区、移动窗口、跳转工具，不必逐个找窗口 |
+| 原生状态栏 | 集中显示天气、AI 额度、网速、歌词和基金估值 |
+| 终端工作区 | 编辑器、文件、待办和音乐可单独使用，也可组合窗格 |
 
 ## 主题
 
@@ -63,106 +72,121 @@ Tern 窗口内的窗格布局。
 
 </details>
 
-## 功能
+## 日常使用
 
-- **平铺桌面**：基于 [omacosy](https://github.com/paulsp94/omacosy)，包含 AeroSpace、原生状态栏、窗口边框、手势和主题；源码及本地改动位于 `omacosy/src`
-- **状态栏数据**：天气、AI 额度、同步歌词、网速和基金盘中估值
-- **本地音乐**：beets 管理曲库，MPD 播放，rmpc 作播放器；Swift 桥接程序把 MPD 接入 macOS「正在播放」和媒体键
-- **新闻阅读**：Docker 里的 FreshRSS，阅读扩展在后台翻译外文文章
-- **终端与编辑器**：fish、Neovim（lazy.nvim）、带插件的 yazi、btop
-- **输入法跟随窗格**：Tern 插件按终端窗格切换 macOS 输入法
-- **系统操作**：锁屏、睡眠、切换外观和天气，做成 [Tinycast](https://tinycast.dev) 脚本命令
+桌面默认用 AeroSpace 管理窗口，每个工作区可以放一个或多个 App。截图中的分栏是 Tern 内部的窗格，不是必须使用的桌面布局。
 
-## 快速开始
+在 Tern 中可以手动建立两个 session（会话，用来归组标签页）：
+
+| session 名称 | 放什么 | 如何返回 |
+|---|---|---|
+| `Agent` | 运行 omp 的标签页 | `Super+Shift+A` 恢复上次的标签和焦点，不新建会话 |
+| `Tools` | 分别运行 rmpc、yazi、dooit 的标签页 | 用各工具的全局快捷键直达 |
+
+先启动工具，再使用下表跳转。音乐、文件和待办的快捷键会查找已有标签，找不到时才新建并运行工具。
+
+### 常用快捷键
+
+`Super` 是按住 Caps Lock，等同于 `Cmd+Ctrl+Option`，不是单独的 Cmd。下面以默认 AeroSpace 配置为准。
+
+| 快捷键 | 操作 |
+|---|---|
+| `Super+Enter` / `Super+Shift+Enter` | 聚焦终端，未打开则启动 / 打开默认浏览器 |
+| `Super+Shift+A` | 返回 Tern 的 `Agent` 会话 |
+| `Super+Shift+S` | 音乐：rmpc |
+| `Super+Shift+Y` | 文件：yazi |
+| `Super+Shift+D` | 待办：dooit |
+| `Super+Shift+L` | 笔记：Logseq |
+| `Super+Shift+T` / `Super+Shift+B` | 下一套主题 / 下一张壁纸 |
+| `Super+Shift+Q` | 锁屏 |
+| `Super+K` | 查看快捷键速查表 |
+
+| 快捷键 | 窗口与工作区 |
+|---|---|
+| `Super+1` 至 `Super+9` | 切换当前显示器的工作区 |
+| `Super+Tab` / `Super+Shift+Tab` | 下一个 / 上一个工作区 |
+| `Super+方向键` | 聚焦对应方向的窗口 |
+| `Super+Shift+方向键` | 移动窗口 |
+| `Super+Shift+1` 至 `Super+Shift+9` | 把窗口移到对应工作区并跟随 |
+| `Super+F` | 在当前工作区放大窗口，保留状态栏和外边距 |
+| `Super+W` | 关闭窗口 |
+
+完整按键和 OmniWM 的差异见 [omacosy 快捷键说明](omacosy/src/README.md#keybindings--super--hold-caps-lock)。
+
+## 安装到自己的 Mac
+
+桌面以 macOS 26 Tahoe 为开发基线，不保证旧版 macOS 的兼容性。先安装 [Homebrew](https://brew.sh) 和 Xcode Command Line Tools（`xcode-select --install`）。
+
+截图使用 [Tern](https://stencil.so/tern)，它目前处于封闭内测，安装器不会安装它。默认终端是 Ghostty，不依赖 Tern 也能安装桌面，但外观和会话操作不会与截图完全相同。
+
+**安装会修改 macOS defaults、加载 LaunchAgents、编译辅助程序、设置壁纸并替换配置文件。** 被替换的文件保存在 `~/.dotfiles-backup/<时间>/`，文件备份不能还原系统设置。权限和卸载方式见 [omacosy 安装说明](omacosy/src/README.md)。
+
+### 1. 下载并预览改动
+
+不要覆盖现有的 `~/.config`，安装器会把所选配置目录链接进去。
 
 ```bash
-git clone https://github.com/Asaki14/dotfiles.git ~/.config
-cd ~/.config && ./install.sh
+git clone https://github.com/Asaki14/dotfiles.git ~/.local/share/dotfiles
+cd ~/.local/share/dotfiles
+./install.sh --dry-run
 ```
 
-如果 `~/.config` 已存在，克隆到其他目录即可：`install.sh` 会把各配置目录链接进 `~/.config`，被替换的文件移到 `~/.dotfiles-backup/<时间>/`。
+如果已经安装 Tern，安装前把桌面终端改成 Tern：
+
+```bash
+printf 'TERMINAL=Tern\n' > omacosy/src/config/apps.local.conf
+```
+
+该文件不纳入 Git。其他默认 App 也可在这里覆盖，字段见 [apps.conf](omacosy/src/config/apps.conf)。
+
+### 2. 安装
+
+```bash
+./install.sh
+```
+
+默认安装 AeroSpace 桌面和仓库各模块的软件及配置，包括不在首页展开的可选工具。已有安装会保留所选窗口管理器。
 
 | 选项 | 作用 |
 |---|---|
-| `--modules yazi,fish` | 只装这些配置目录及其所需软件；列出 `omacosy` 时才装桌面 |
-| `--dry-run` | 只打印每一步，不做改动 |
-| `--no-brew` | 跳过 `Brewfile` 里的 Homebrew 软件 |
-| `--no-desktop` | 跳过 omacosy 桌面（窗口管理、状态栏、主题） |
-| `--no-network` | 不按 IP 地址查询所在城市 |
+| `--modules omacosy,karabiner,fish,yazi` | 只安装列出的模块及依赖，包含 `omacosy` 才安装桌面 |
+| `--no-desktop` | 只安装工具配置，不运行桌面安装器 |
+| `--no-brew` | 跳过顶层 `Brewfile`，不跳过桌面安装器自己的依赖安装 |
+| `--no-network` | 跳过安装时的 IP 城市查询，不禁用天气等后续联网 |
+| `--dry-run` | 打印安装动作，不修改文件 |
 
-`install.sh` 将本机配置写入以下文件，不纳入 Git：
+### 3. 授权并配置自己的工具
 
-| 文件 | 来源 |
+在「系统设置 → 隐私与安全性」中按安装提示授权：
+
+| 权限 | 用途 |
 |---|---|
-| `omacosy/bar-items.local.conf` | 已配对的 AirPods 或耳机，状态栏显示其电量 |
-| `omacosy/scripts/location.local.json` | IP 地址所在城市（ip-api.com），用于天气 |
-| `omacosy/scripts/fission_fund_wallet.json` | 从示例复制；填入基金代码和份额，或从 `bar-items.conf` 删掉 `fission-estimator` |
+| 辅助功能 | AeroSpace 及桌面辅助程序管理窗口 |
+| 输入监控 | Karabiner 提供 Super 键，手势程序读取触控板 |
+| 蓝牙、定位、自动化 | 状态栏设备信息、Wi-Fi 名称和系统操作，按需开启 |
 
-## 安装前须知
+如果 Caps Lock 没有效果，在 Karabiner-Elements → Settings → Devices 中为键盘启用 **Modify events**。完整权限清单见 [omacosy 权限说明](omacosy/src/README.md#permissions)。
 
-- [Tern](https://stencil.so/tern) 处于封闭内测，需自行安装。AI 额度和文章翻译依赖 [omp](https://github.com/can1357/oh-my-pi)，需自行安装并登录。
-- FreshRSS 和 Tinycast 需手动设置，见下文 [FreshRSS](#freshrss) 和 [Tinycast](#tinycast)。
-- omacosy 安装器会修改 macOS defaults、加载 LaunchAgents、编译辅助程序、设置壁纸，并覆盖桌面配置。文件备份不能还原这些系统设置。先读 [omacosy/src/README.md](omacosy/src/README.md)，或加 `--no-desktop`。
-- API key 写入 `fish/conf.d/api_keys.local.fish`，该文件已被 gitignore。
+| 按需配置 | 位置或操作 |
+|---|---|
+| AI 会话与额度 | 自行安装并登录 [omp](https://github.com/can1357/oh-my-pi)，再建立 `Agent` 会话 |
+| 待办 | 自行安装 [dooit](https://github.com/kraanzu/dooit)，安装器未包含它 |
+| 本地音乐 | 修改 `mpd/mpd.conf` 和 `beets/config.yaml` 中的 `~/Music/lib`，启动 MPD 后运行 rmpc |
+| 媒体键与「正在播放」 | 执行 `sh ~/.config/mpd/nowplaying/install.sh` |
+| 状态栏内容 | 编辑 `omacosy/bar-items.conf`，删除不需要的数据项 |
+| 本机数据 | 耳机与城市自动写入本机配置，基金填写 `omacosy/scripts/fission_fund_wallet.json` |
 
-## 目录
+本机数据文件不纳入 Git。API key 放在已忽略的 `fish/conf.d/api_keys.local.fish`，不要写入公开配置。
+
+## 配置位置
 
 | 路径 | 内容 |
 |---|---|
-| `omacosy/src/` | 桌面本体：状态栏、窗口管理配置、主题及其安装器；`UPSTREAM` 记录所基于的上游提交 |
-| `omacosy/` | 状态栏布局（`bar-items.conf`）及数据脚本：天气、AI 用量、歌词、基金估值 |
-| `fish/` `nvim/` `yazi/` `btop/` | Shell、编辑器、文件管理器和系统监视器 |
-| `mpd/` `rmpc/` `beets/` | 曲库、播放、歌单和「正在播放」桥接 |
-| `freshrss/` | FreshRSS compose 文件、阅读扩展和翻译进程 |
-| `tern/plugins/` `tinycast/scripts/` | Tern 终端插件和 Tinycast 系统命令 |
-| `karabiner/` `linearmouse/` | 键盘和鼠标 |
+| [`omacosy/src/`](omacosy/src/) | 桌面本体、主题、快捷键及安装器 |
+| [`omacosy/bar-items.conf`](omacosy/bar-items.conf) | 状态栏布局 |
+| [`omacosy/scripts/`](omacosy/scripts/) | 天气、AI 额度、歌词及基金估值 |
+| `fish/`、`nvim/`、`yazi/`、`btop/` | Shell、编辑器、文件管理器和系统监视器 |
+| `mpd/`、`rmpc/`、`beets/` | 本地音乐与曲库 |
+| `karabiner/`、`linearmouse/` | 键盘和鼠标 |
 
-因机器而异、但不会自动检测的路径：曲库（`mpd/mpd.conf` 和 `beets/config.yaml` 中的 `~/Music/lib`）和 `omp` 程序（`freshrss/reader-settings.json`）。
-
-## FreshRSS
-
-本机运行的 FreshRSS（`127.0.0.1:8088`，每小时第 7、37 分钟更新订阅）。`LocalReader` 扩展把外文文章显示为中文，点「查看原文」切回原文。`reader.py` 在后台通过 omp 调用 `reader-settings.json` 里的模型翻译，文章正文会发给该模型服务。Mac 需保持唤醒。
-
-```sh
-colima start
-docker-compose -f ~/.config/freshrss/compose.yaml up -d
-open http://localhost:8088/              # 创建管理员账户，它会成为默认用户
-~/.config/freshrss/install-reader.sh     # 安装 LaunchAgent local.freshrss.reader，每 30 秒运行
-```
-
-| 操作 | 命令或位置 |
-|---|---|
-| 立即更新订阅 | `docker exec --user www-data freshrss cli/actualize-user.php --user <user>` |
-| 立即运行翻译 | `launchctl kickstart gui/$(id -u)/local.freshrss.reader` |
-| 翻译日志 | `freshrss/reader-data/worker.log` |
-| 备份 | Docker 卷 `freshrss_freshrss_data`、`freshrss_freshrss_extensions` 和 `freshrss/reader-data/`；`down -v` 会删除这两个卷 |
-| 其他设备访问 | `tailscale serve --bg --https=8443 http://127.0.0.1:8088` |
-
-测试：`cd freshrss && uv run --with beautifulsoup4 --with lxml_html_clean --with markdown --with markdownify --with readability-lxml python -m unittest -v test_reader`
-
-## Tinycast
-
-每台机器导入一次：Tinycast 设置 → 命令 → 启用自定义命令 → 导入 → 选择 `~/.config/tinycast/scripts`。导入的命令直接运行该目录里的脚本，不要删除该目录。给 Weather 打开「显示输出」，天气需手动执行。
-
-| 命令 | 作用 | 首次运行需要的权限 |
-|---|---|---|
-| Toggle Appearance | 切换深色 / 浅色 | 自动化 → 系统事件 |
-| Weather | 查询 `omacosy/scripts/location.local.json` 所在地的实况天气 | 无 |
-| Lock Screen | 发送 ⌃⌘Q，立即锁屏，不受锁屏宽限期影响 | 辅助功能 |
-| Sleep | 确认后执行 `pmset sleepnow` | 无 |
-
-## Tern 输入法
-
-`tern/plugins/input-source-policy` 在 Tern 窗格间切换焦点时切换 macOS 输入法：Agent 窗格用上次的中文输入法（默认 Rime），标题为 `yazi`、`dooit`、`rmpc` 的窗格及其他窗格用 US Extended。只有焦点窗格或其类别变化并保持 700 ms 后才切换，在窗格内手动切换的输入法不会被改回。
-
-```sh
-tern plugin link ~/.config/tern/plugins/input-source-policy   # install.sh 会执行
-tern/plugins/input-source-policy/scripts/input-source-policy status
-```
-
-英文应用名单是 `window.luau` 里的 `ASCII_APPS`。每次切换记录在 `~/.local/state/tern-input-source-policy/policy.log`。
-
-## 说明
-
-- `AGENTS.md` 说明各部分之间的数据流。
-- 以 [MIT](LICENSE) 许可发布。omacosy 的许可见 `omacosy/src/LICENSE`。
+以 [MIT](LICENSE) 许可发布。omacosy 的许可见 [omacosy/src/LICENSE](omacosy/src/LICENSE)。
