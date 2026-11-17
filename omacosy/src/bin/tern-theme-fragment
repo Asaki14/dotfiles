@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # tern-theme-fragment [theme-dir] [out] — render the omarchy palette into an omp
 # theme (Tern takes its terminal colours from the theme's `terminal` section:
-# background, foreground and the 16 ANSI colours). The scheduled theme plugin
-# applies it at night; daytime theme selections remain owned by Tern.
+# background, foreground and the 16 ANSI colours). The theme plugin applies it
+# with Clear material, preserving the user's density, opacity and blur.
 # Idempotent, safe to re-run, and a no-op when the palette is unreadable.
 # Set TERN_THEME_NO_RELOAD=1 to skip the switch (used by tests).
 
@@ -84,6 +84,5 @@ fi
 export TERN_PANE_SOCKET="${TERN_PANE_SOCKET:-$HOME/Library/Application Support/Tern/daemon.sock}"
 TERN="$(command -v tern || echo /Applications/Tern.app/Contents/MacOS/tern)"
 [ -x "$TERN" ] && [ -S "$TERN_PANE_SOCKET" ] || exit 0
-# The plugin owns theme pins and CSS for each mode. Desktop theme changes only
-# regenerate the palette; they must not replace a daytime selection.
+# The plugin applies the generated palette and CSS whenever the desktop theme changes.
 "$TERN" ctl plugins run plugin.omacosy-theme.refresh >/dev/null

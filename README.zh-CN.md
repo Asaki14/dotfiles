@@ -9,9 +9,9 @@
 
 ![Osaka Jade 真实桌面：透明 Tern 三窗格中的 Neovim、dooit 和 yazi](assets/layouts/three-pane.jpg)
 
-## 夜间主题
+## 主题
 
-Tern 在 19:30 至次日 08:00 使用透明外观，白天保留单独选择的主题。
+Tern 全天使用透明外观，配色随桌面主题切换。
 
 <table>
   <tr>

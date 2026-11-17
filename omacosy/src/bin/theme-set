@@ -112,8 +112,7 @@ fi
 # yazi: render the palette into the omacosy flavor and broadcast a hot reload
 "$REPO_DIR/bin/yazi-theme-fragment" "$THEMES_DIR/$NAME" >/dev/null 2>&1 || true
 
-# Tern: regenerate the palette; its plugin applies it at night without
-# replacing the theme selected in Tern during the day.
+# Tern: regenerate and apply the desktop palette and native-agent CSS.
 "$REPO_DIR/bin/tern-theme-fragment" "$THEMES_DIR/$NAME" >/dev/null 2>&1 || true
 
 echo "theme: $NAME"

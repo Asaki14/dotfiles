@@ -9,9 +9,9 @@
 
 ![The Osaka Jade desktop with Neovim, dooit and yazi in a transparent three-pane Tern workspace](assets/layouts/three-pane.jpg)
 
-## Night themes
+## Themes
 
-Tern uses a transparent appearance from 19:30 to 08:00 and a separately selected theme during the day.
+Tern stays transparent and follows the desktop theme throughout the day.
 
 <table>
   <tr>
