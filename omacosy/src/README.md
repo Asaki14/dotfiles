@@ -297,7 +297,7 @@ next theme switch, which resets the bar to the theme's `layout`.
 |---|---|---|
 | `classic` | nothing | nothing |
 | `music` | a bottom strip with the lyric line and progress | media |
-| `market` | a bottom strip with the fund's intraday P&L curve and a net-speed sparkline | fund, net speed |
+| `market` | a bottom strip with recent cumulative fund returns and a net-speed sparkline | fund, net speed |
 | `studio` | a bottom strip with AI, lyrics, net speed and fund | those four |
 | `zen` | a left capsule with workspaces, AI, status and clock | the whole top bar |
 
@@ -311,9 +311,17 @@ Layouts rewrite the window manager's outer gaps at runtime (`[gaps]` in
 `~/.config/aerospace/aerospace.toml`, `[gaps.outer]` under OmniWM) so tiled
 windows stay clear of a bottom strip or side capsule, and take the top edge
 back when there is no top bar. The original top gap is parked in
-`~/.local/state/omacosy/top-gap` meanwhile and restored on the way out. The fund
-curve is sampled at each fund refresh (every 10 minutes) into
-`~/.cache/omacosy/fund-today.json`, so it fills in over the trading day.
+`~/.local/state/omacosy/top-gap` meanwhile and restored on the way out.
+
+The fund pill shows today's profit/loss beside the twenty-day cumulative trend,
+without period or estimate labels. Amount and curve colors follow their own returns.
+The `基金` popup shows the period's day count (up to 20 trading days), covered dates,
+cumulative return curve, profit/loss and percentage for the total and each fund.
+The estimator refreshes every 10 minutes. Historical performance uses today's
+shares with official daily NAV returns over the latest 20 dates shared by all
+held funds, including today's estimate when available. Cash dividends are
+included. Period percentages divide the period profit by its opening value.
+This is current-holdings performance, not a reconstruction of past account trades.
 
 ### Workspace icons
 

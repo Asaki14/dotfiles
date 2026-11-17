@@ -695,36 +695,13 @@ func handleLayoutCommand() {
 }
 
 // --- module histories ---------------------------------------------------------
-// The bottom strip's graphs need a past the pills never kept: the last
-// minutes of proxy traffic, and today's fund P&L readings.
+// The bottom strip retains the last three minutes of proxy traffic.
 var netHistory: [(up: Double, down: Double)] = []
 let netHistoryLength = 90 // 3 min at the 2 s poll
 
 func recordNet(up: Double, down: Double) {
     netHistory.append((up, down))
     if netHistory.count > netHistoryLength { netHistory.removeFirst(netHistory.count - netHistoryLength) }
-}
-
-// fund samples persist per day, so a restart mid-session keeps the curve
-let fundHistoryURL = FileManager.default.homeDirectoryForCurrentUser
-    .appendingPathComponent(".cache/omacosy/fund-today.json")
-var fundHistory: (day: String, values: [Double]) = {
-    guard let data = try? Data(contentsOf: fundHistoryURL),
-          let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-          let day = obj["day"] as? String, let values = obj["values"] as? [Double]
-    else { return ("", []) }
-    return (day, values)
-}()
-
-func recordFund(_ value: Double, day: String) {
-    if fundHistory.day != day { fundHistory = (day, []) }
-    if fundHistory.values.last == value { return }
-    fundHistory.values.append(value)
-    try? FileManager.default.createDirectory(at: fundHistoryURL.deletingLastPathComponent(),
-                                             withIntermediateDirectories: true)
-    if let data = try? JSONSerialization.data(withJSONObject: ["day": day, "values": fundHistory.values]) {
-        try? data.write(to: fundHistoryURL, options: .atomic)
-    }
 }
 
 // --- window-manager gaps ----------------------------------------------------
@@ -1809,12 +1786,11 @@ struct TrendDay {
     var span: Double { spanHigh - spanLow }
 }
 
-// One Fishing Funds line on a fixed column grid: name, trend curve, rate, profit.
-// `total` is the portfolio row — bold, no name column of its own.
+// Fund rows share a fixed name, cumulative curve, rate and profit grid.
 struct FundLine {
     var name = ""
     var rate: Double?
-    var profit = 0.0
+    var profit: Double?
     var spark: [Double] = []
     var total = false
 }
@@ -2164,9 +2140,9 @@ final class PopupView: NSView {
     func drawFund(_ line: FundLine, in rect: NSRect) {
         let numFont = nerdFont(line.total ? "Bold" : "Regular", 12.5)
         let tone: NSColor
-        switch line.rate {
-        case .some(let r) where r > 0.005: tone = palette.green
-        case .some(let r) where r < -0.005: tone = palette.red
+        switch line.profit {
+        case .some(let p) where p > 0.005: tone = palette.green
+        case .some(let p) where p < -0.005: tone = palette.red
         default: tone = palette.muted
         }
         var x = rect.minX + 4
@@ -2185,7 +2161,7 @@ final class PopupView: NSView {
                 return NSPoint(x: box.minX + box.width * CGFloat(i) / CGFloat(line.spark.count - 1),
                                y: box.minY + box.height * t)
             }
-            let rising = line.spark.last! >= line.spark.first!
+            let rising = (line.profit ?? 0) >= 0
             let ink = rising ? palette.green : palette.red
             let area = NSBezierPath()
             area.move(to: NSPoint(x: pts[0].x, y: box.minY))
@@ -2204,16 +2180,16 @@ final class PopupView: NSView {
             let end = pts.last!
             ink.setFill()
             NSBezierPath(ovalIn: NSRect(x: end.x - 2, y: end.y - 2, width: 4, height: 4)).fill()
-        } else {
+        } else if !line.total {
             drawText("\u{2014}", numFont, palette.muted, leftAt: x + fundSparkWidth / 2 - 4, midY: rect.midY)
         }
         x += fundSparkWidth + fundColumnGap
 
-        let rateText = line.rate.map { String(format: "%+.2f%%", $0) } ?? "\u{2014}"
+        let rateText = line.rate.map { String(format: "%+.2f%%", $0) } ?? ""
         drawText(rateText, numFont, tone,
                  leftAt: x + fundRateWidth - advance(rateText, numFont), midY: rect.midY)
         x += fundRateWidth + fundColumnGap
-        let profitText = line.rate == nil ? "\u{2014}" : String(format: "%+.2f", line.profit)
+        let profitText = line.profit.map { String(format: "%+.2f", $0) } ?? "\u{2014}"
         drawText(profitText, numFont, tone,
                  leftAt: x + fundProfitWidth - advance(profitText, numFont), midY: rect.midY)
     }
@@ -4321,10 +4297,7 @@ func sideModuleHeight(_ module: String, _ owner: BarSurface) -> CGFloat {
 
 let bottomPad: CGFloat = 14
 
-// a bottom module's natural width; the strip is their sum, centred. Zero
-// means "nothing to show": lyrics with no player, fund before its first
-// reading. The fund drops its curve (and that width) until the day has two
-// readings to draw a line through.
+// A bottom module's natural width; the strip is their sum, centred.
 func bottomModuleWidth(_ module: String) -> CGFloat {
     switch module {
     case "lyrics": return model.media.running && !model.media.title.isEmpty ? 400 : 0
@@ -4332,7 +4305,7 @@ func bottomModuleWidth(_ module: String) -> CGFloat {
     case "net": return 280
     case "fund":
         guard rightItems["fission"] != nil else { return 0 }
-        return fundHistory.values.count > 1 ? 300 : 96
+        return 300
     default: return 0
     }
 }
@@ -4519,31 +4492,35 @@ final class AuxView: NSView {
         drawText("↓ " + proxySpeedRate(last.down), small, palette.label, leftAt: x, midY: rect.midY - 6)
     }
 
-    // today's P&L: the figure in its tone, and the day's readings as a curve
-    // around a zero line
+    // Today's amount and the independent twenty-day cumulative trend.
     private func drawFundModule(_ rect: NSRect) {
-        guard let item = rightItems["fission"] else { return }
-        let tone = item.iconColor.map { palette[keyPath: $0] } ?? palette.label
-        let ink = inkBox(item.icon, iconFont).width
-        drawIcon(item.icon, iconFont, tone, centeredIn: NSRect(x: rect.minX, y: rect.minY, width: ink,
-                                                               height: rect.height))
+        guard let f = fissionFund else { return }
+        let tone = f.color == "up" ? palette.green : f.color == "down" ? palette.red : palette.muted
         let font = nerdFont("SemiBold", 13)
-        let label = tweenLabel("bottom.fund", item.label)
-        drawText(label, font, tone, leftAt: rect.minX + ink + 7, midY: rect.midY)
-        let graphX = rect.minX + ink + 7 + advance("+0000.00", font) + 10
-        let graph = NSRect(x: graphX, y: rect.minY + 6, width: rect.maxX - graphX, height: rect.height - 12)
-        let values = fundHistory.values
-        guard values.count > 1 else { return } // the curve needs two readings
+        let amount = f.main
+        drawText(amount, font, tone, leftAt: rect.minX, midY: rect.midY)
+        let graphX = rect.minX + max(84, advance(amount, font) + 12)
+        let graph = NSRect(x: graphX, y: rect.minY + 6, width: rect.maxX - graphX,
+                           height: rect.height - 12)
+        let values = f.recent.spark
+        let trendProfit = f.recent.profit ?? 0
+        let trendTone = trendProfit > 0 ? palette.green : trendProfit < 0 ? palette.red : palette.label
+        guard values.count > 1, graph.width > 0 else { return }
         let low = min(0, values.min() ?? 0), high = max(0, values.max() ?? 0)
-        guard high > low else { return }
-        let zeroY = graph.minY + graph.height * CGFloat((0 - low) / (high - low))
+        let span = max(0.01, high - low)
+        let zeroY = graph.minY + graph.height * CGFloat(-low / span)
         palette.muted.withAlphaComponent(0.4).setFill()
         var dash = graph.minX
         while dash < graph.maxX {
             NSRect(x: dash, y: zeroY, width: 3, height: 1).fill()
             dash += 6
         }
-        sparkline(values, in: graph, slots: values.count, low: low, high: high, color: tone)
+        sparkline(values, in: graph, slots: values.count, low: low, high: low + span, color: trendTone)
+        if let last = values.last {
+            let endY = graph.minY + graph.height * CGFloat((last - low) / span)
+            trendTone.setFill()
+            NSBezierPath(ovalIn: NSRect(x: graph.maxX - 2, y: endY - 2, width: 4, height: 4)).fill()
+        }
     }
 
     // --- side capsule ---
@@ -5988,27 +5965,21 @@ func updateProxySpeed() {
     }.resume()
 }
 
-// --- fission_fund (Fishing Funds) ------------------------------------------
-// The estimator (`~/.config/sketchybar/plugins/fission_fund_estimator.js`)
-// stays untouched: `node <script>` prints one JSON object to stdout and that
-// object already carries everything the pill and the popup need. Swift owns
-// the schedule the sketchybar daemon used to own (bar_daemon.sh:123-143):
-// fetch every 600 s, skip while the market is closed, render in-process.
+// --- fission_fund ---------------------------------------------------------
+// Node calculates current-share historical performance; Swift renders its JSON.
 
 struct FissionFund {
     var main = "\u{2014}"
     var color = "flat"
     var summary = ""
-    var summaryIcon = ""
     var rows: [FundLine] = []
-    var total: FundLine?
+    var recent = FundLine(name: "近0日", total: true)
+    var dates: [String] = []
 }
 
 var fissionFund: FissionFund?
 
-// shared with the sketchybar config on purpose: the estimator re-reads this
-// file for its own 30-minute stale-reuse path (fission_fund_estimator.js:441),
-// so whoever runs it owes it the write fission_fund_popup.sh:47-56 did.
+// Shared with the estimator's short-lived quote fallback.
 let fissionCacheURL = URL(fileURLWithPath: "/tmp/sketchybar_daemon/fission_fund_detail.json")
 
 func nodeBinary() -> String {
@@ -6027,12 +5998,11 @@ func fissionEstimatorPath() -> String? {
     return path
 }
 
-// bar_daemon.sh:128-140 verbatim: once a closed day's JSON names the next
-// trading day, nothing it reports can change before that day, so the
-// estimator (network fetch plus a store decrypt) stays asleep until then.
-// Pure, so it can be exercised without a fetch.
+// Refresh legacy return data and keep fetching until estimates settle.
 func fissionShouldFetch(_ cached: [String: Any]?, today: String) -> Bool {
     guard let cached,
+          let recent = cached["recent"] as? [String: Any], recent["estimated"] as? Bool == false,
+          recent["basis"] as? String == "current-shares",
           cached["marketStatus"] as? String == "closed",
           let next = cached["nextTradingDay"] as? String, !next.isEmpty
     else { return true }
@@ -6046,30 +6016,25 @@ func shanghaiToday() -> String {
     return f.string(from: Date())
 }
 
-// `.ok == false` is a normal outcome (the Fishing Funds store is missing or
-// the quote fetch failed): the pill shows an em dash, exactly as the
-// sketchybar version does, and the popup still carries the reason.
+// Quote failures preserve recorded returns and expose the failure in the popup.
 func fissionParse(_ o: [String: Any]) -> FissionFund {
     var f = FissionFund()
     let ok = o["ok"] as? Bool ?? false
     f.main = ok ? (o["main"] as? String ?? "\u{2014}") : "\u{2014}"
     f.color = ok ? (o["color"] as? String ?? "flat") : "muted"
-    f.summary = o["summary"] as? String ?? ""
-    f.summaryIcon = o["summaryIcon"] as? String ?? ""
-    // displayRows is the trimmed 16 the popup script renders; rows is the
-    // full set it falls back to
-    let raw = (o["displayRows"] as? [[String: Any]]) ?? (o["rows"] as? [[String: Any]]) ?? []
+    f.summary = ok ? "" : (o["summary"] as? String ?? "")
+    let recent = o["recent"] as? [String: Any] ?? [:]
+    f.dates = recent["dates"] as? [String] ?? []
+    f.recent = FundLine(name: "近\(f.dates.count)日", rate: (recent["rate"] as? NSNumber)?.doubleValue,
+                        profit: (recent["profit"] as? NSNumber)?.doubleValue,
+                        spark: (recent["values"] as? [NSNumber] ?? []).map(\.doubleValue), total: true)
+    let raw = recent["rows"] as? [[String: Any]] ?? []
     f.rows = raw.prefix(16).compactMap {
         guard let name = $0["name"] as? String else { return nil }
         return FundLine(name: name,
                         rate: ($0["rate"] as? NSNumber)?.doubleValue,
-                        profit: ($0["profit"] as? NSNumber)?.doubleValue ?? 0,
+                        profit: ($0["profit"] as? NSNumber)?.doubleValue,
                         spark: ($0["spark"] as? [NSNumber] ?? []).map(\.doubleValue))
-    }
-    if ok, let rate = (o["totalRate"] as? NSNumber)?.doubleValue,
-       let profit = (o["totalProfit"] as? NSNumber)?.doubleValue {
-        f.total = FundLine(name: "\u{5408}\u{8BA1}", rate: rate, profit: profit,
-                           spark: (o["totalSpark"] as? [NSNumber] ?? []).map(\.doubleValue), total: true)
     }
     return f
 }
@@ -6085,29 +6050,31 @@ func applyFission(_ f: FissionFund) {
     case "down": icon = "\u{F0533}"; tint = \.red
     default: icon = "\u{F0534}"; tint = nil
     }
+    let previousItem = rightItems["fission"]
     set("fission") { $0.icon = icon; $0.label = f.main; $0.iconColor = tint; $0.labelColor = tint }
-    if let value = Double(f.main) { recordFund(value, day: shanghaiToday()) }
+    if previousItem == rightItems["fission"] {
+        repaint()
+        if openPopup == "fission" { refreshPopup() }
+    }
 }
 
 func fissionRows() -> [PopupRow] {
     guard let f = fissionFund else { return [] }
-    // the summary time rides the title row's right edge instead of a loose
-    // second line, so the figures below own the grid
-    var rows: [PopupRow] = [PopupRow(icon: "", text: "Fishing Funds",
-                                     detail: f.summaryIcon, hero: true)]
-    if let total = f.total {
-        var r = PopupRow(); r.fund = total; rows.append(r)
-        rows.append(PopupRow(rule: true))
-    } else if !f.summary.isEmpty {
-        rows.append(PopupRow(text: f.summary, dim: true))
-    }
+    let range: String
+    if let first = f.dates.first, let last = f.dates.last {
+        let start = first.suffix(5).replacingOccurrences(of: "-", with: "/")
+        let end = last.suffix(5).replacingOccurrences(of: "-", with: "/")
+        range = first == last ? start : "\(start)–\(end)"
+    } else { range = "" }
+    var rows = [PopupRow(icon: "", text: "基金", detail: range, hero: true)]
+    if !f.summary.isEmpty { rows.append(PopupRow(text: f.summary, dim: true)) }
+    var recent = PopupRow(); recent.fund = f.recent; rows.append(recent)
+    if !f.rows.isEmpty { rows.append(PopupRow(rule: true)) }
     for line in f.rows { var r = PopupRow(); r.fund = line; rows.append(r) }
     return rows
 }
 
-// off the main thread, like primeMedia(): this spawns Node, decrypts a store
-// and hits the network. The cache is applied first so a fetch that is skipped
-// or fails still paints the last known figure.
+// Fetch away from the main thread; apply cached returns before the network result.
 func updateFissionFund() {
     guard let estimator = fissionEstimatorPath() else { return }
     rebuildQueue.async {

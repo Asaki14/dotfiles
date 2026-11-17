@@ -9,6 +9,7 @@
 // 今日合计排除上一净值；回归检查：node --test ~/.config/omacosy/scripts/fission_fund_estimator.test.js
 // 006484 使用 159650（0-3年国开债）价格涨幅粗估；期限不同且含折溢价，不作股票仓位校准。
 // 标的说明：https://www.bosera.com/fund/159650.html；正式净值发布后自动替换估算。
+// recent 按当前份额计算近20日历史表现，包含现金分红，不还原历史交易后的账户收益。
 
 const fs = require('fs');
 const path = require('path');
@@ -96,7 +97,7 @@ async function loadHolidays() {
   cache.fetchedAt = cache.fetchedAt || {};
   const year = Number(dateInChina().slice(0, 4));
   const month = Number(dateInChina().slice(5, 7));
-  const wanted = month === 12 ? [year, year + 1] : [year];
+  const wanted = month === 12 ? [year - 1, year, year + 1] : [year - 1, year];
   let dirty = false;
   for (const y of wanted) {
     if (cache.years[y] && Date.now() - Number(cache.fetchedAt[y] || 0) < 7 * 24 * 3600 * 1000) continue;
@@ -152,6 +153,70 @@ function previousTradingDayFrom(value, holidays) {
 function navCountsToday(code, navDate, today, holidays) {
   if (!PROXIES[code]?.qdii) return navDate === today;
   return navDate >= previousTradingDayFrom(new Date(`${today}T12:00:00+08:00`), holidays);
+}
+
+function returnDate(code, navDate, holidays) {
+  return PROXIES[code]?.qdii
+    ? nextTradingDayFrom(new Date(`${navDate}T12:00:00+08:00`), holidays)
+    : navDate;
+}
+
+// Historical performance assumes today's shares throughout the displayed period.
+function summarizeRecent(funds, officials, rows, today, holidays, marketStatus) {
+  const empty = { basis: 'current-shares', profit: null, rate: null, dates: [], values: [], estimated: false, rows: [] };
+  const held = funds.filter(fund => fund.cyfe > 0);
+  if (!held.length) return empty;
+  const byCode = new Map(rows.map(row => [row.code, row]));
+  const series = held.map(fund => {
+    const points = officials.get(fund.code)?.points || [];
+    const days = new Map();
+    for (let i = 1; i < points.length; i++) {
+      const previousNav = Number(points[i - 1].y);
+      const nav = Number(points[i].y);
+      if (!(previousNav > 0) || !Number.isFinite(nav)) continue;
+      const navDate = dateInChina(new Date(Number(points[i].x)));
+      const date = returnDate(fund.code, navDate, holidays);
+      const noon = new Date(`${date}T12:00:00+08:00`);
+      if (date > today || isWeekend(noon) || holidays.has(date)) continue;
+      const rawRate = points[i].equityReturn;
+      const hasRate = rawRate !== null && rawRate !== undefined && rawRate !== ''
+        && Number.isFinite(Number(rawRate));
+      const profit = fund.cyfe * (hasRate ? previousNav * Number(rawRate) / 100 : nav - previousNav);
+      const previous = days.get(date);
+      days.set(date, { profit: (previous?.profit || 0) + profit,
+        base: previous?.base ?? fund.cyfe * previousNav, estimated: false });
+    }
+    const row = byCode.get(fund.code);
+    if (marketStatus === 'open' && row?.valuationType === '今日估算'
+      && Number.isFinite(row.profit) && row.base > 0 && !days.has(today)) {
+      days.set(today, { profit: row.profit, base: row.base, estimated: true });
+    }
+    return { fund, days };
+  });
+  const dates = [...series[0].days.keys()].filter(date => series.every(item => item.days.has(date)))
+    .sort().slice(-20);
+  if (!dates.length) return empty;
+  let estimated = false;
+  const totals = Array(dates.length).fill(0);
+  let totalBase = 0;
+  const contributions = series.map(({ fund, days }) => {
+    const base = days.get(dates[0]).base;
+    totalBase += base;
+    const spark = [0];
+    for (const [index, date] of dates.entries()) {
+      const day = days.get(date);
+      spark.push(spark.at(-1) + day.profit);
+      totals[index] += day.profit;
+      estimated ||= day.estimated;
+    }
+    const profit = spark.at(-1);
+    return { code: fund.code, name: shortName(fund.name), profit, rate: profit / base * 100, spark };
+  });
+  const values = [0];
+  for (const profit of totals) values.push(values.at(-1) + profit);
+  const profit = values.at(-1);
+  return { basis: 'current-shares', profit, rate: profit / totalBase * 100, dates, values, estimated,
+    rows: contributions.sort((a, b) => b.profit - a.profit) };
 }
 
 function shortName(name) {
@@ -228,7 +293,8 @@ async function fetchOfficial(fund) {
   const date = dateInChina(new Date(Number(latest.x)));
   const nav = Number(latest.y);
   const previousNav = previous ? Number(previous.y) : nav;
-  const rate = Number.isFinite(Number(latest.equityReturn))
+  const rate = latest.equityReturn !== null && latest.equityReturn !== undefined
+    && latest.equityReturn !== '' && Number.isFinite(Number(latest.equityReturn))
     ? Number(latest.equityReturn)
     : (previousNav ? (nav / previousNav - 1) * 100 : 0);
   return {
@@ -322,7 +388,7 @@ function resultFromRate(fund, official, rate, meta) {
   const shares = Number(fund.cyfe || 0);
   const isOfficial = meta.valuationType === '今日净值' || meta.valuationType === '上一净值';
   const profit = isOfficial
-    ? shares * (official.nav - official.previousNav)
+    ? shares * official.previousNav * rate / 100
     : shares * official.nav * rate / 100;
   const base = isOfficial ? shares * official.previousNav : shares * official.nav;
   const label = `${signed(rate)}%  ${signed(profit)}`;
@@ -390,14 +456,15 @@ async function main() {
     process.exitCode = 1;
     return;
   }
+  const today = process.env.FISSION_FUND_TODAY || dateInChina();
+  let holidays = new Set();
   try {
     fs.mkdirSync(CACHE_DIR, { recursive: true });
     const { funds, source: holdingsSource, key: holdingsKey } = loadHoldings();
     const now = new Date();
-    const today = process.env.FISSION_FUND_TODAY || dateInChina(now);
     const todayNoon = new Date(`${today}T12:00:00+08:00`);
     const minutes = Number(process.env.FISSION_FUND_MINUTES || minutesInChina(now));
-    const holidays = await loadHolidays();
+    holidays = await loadHolidays();
     let marketStatus;
     if (isWeekend(todayNoon) || holidays.has(today)) marketStatus = 'closed';
     else if (minutes < MARKET_OPEN_MINUTES) marketStatus = 'pre-open';
@@ -470,37 +537,14 @@ async function main() {
     // 旧净值仅保留在明细；今日合计及收益率分母只包含今日数据。
     const { usable, totalProfit, totalRate, summaryType } = summarizeToday(rows);
     const summaryDisplay = usable.length ? '今日' : '不可用';
-    // 近 SPARK_DAYS 个交易日净值曲线；今日估算作为末点接在最近正式净值之后。
-    const SPARK_DAYS = 20;
-    const seriesByCode = new Map();
-    for (const row of rows) {
-      const official = officials.get(row.code);
-      if (!official || official.error || !Array.isArray(official.points)) continue;
-      const series = official.points.map(p => [dateInChina(new Date(Number(p.x))), Number(p.y)]);
-      if (row.valuationType === '今日估算') {
-        series.push([today, official.nav * (1 + row.rate / 100)]);
-      }
-      seriesByCode.set(row.code, series.slice(-SPARK_DAYS));
-    }
-    // 合计曲线：各基金按当前持仓金额折算，只取所有基金共有的日期。
-    let totalSpark = [];
-    const held = rows.filter(row => seriesByCode.has(row.code) && row.base > 0);
-    if (held.length) {
-      const common = held.map(row => new Set(seriesByCode.get(row.code).map(p => p[0])))
-        .reduce((a, b) => new Set([...a].filter(d => b.has(d))));
-      const dates = seriesByCode.get(held[0].code).map(p => p[0]).filter(d => common.has(d));
-      totalSpark = dates.map(d => held.reduce((sum, row) => {
-        const series = seriesByCode.get(row.code);
-        return sum + row.base * series.find(p => p[0] === d)[1] / series.at(-1)[1];
-      }, 0));
-    }
+    const recent = summarizeRecent(funds, officials, rows, today, holidays, marketStatus);
     const displayRows = rows.map(row => ({
       name: row.name,
       label: row.label,
       color: row.color,
       rate: row.rate,
       profit: row.profit,
-      spark: (seriesByCode.get(row.code) || []).map(p => p[1])
+      spark: []
     })).slice(0, 16);
 
     // 主栏永不显示上一交易日的金额：休市显示「休息」，交易日开盘前显示「未开盘」，
@@ -520,7 +564,7 @@ async function main() {
         && previous.holdingsKey === holdingsKey
         && String(previous.valuationType || '').includes('今日')
         && Date.now() - Date.parse(previous.fetchedAt || 0) < 30 * 60 * 1000) {
-        process.stdout.write(JSON.stringify({ ...previous, staleReuse: true }));
+        process.stdout.write(JSON.stringify({ ...previous, recent, staleReuse: true }));
         return;
       }
       main = '—'; mainColor = 'muted';
@@ -534,15 +578,17 @@ async function main() {
       valuationType: summaryType, main,
       summary: usable.length ? `${signed(totalRate)}%  ${signed(totalProfit)}` : '无可靠数据',
       summaryIcon, color: mainColor,
-      totalProfit, totalRate, totalSpark, rows, displayRows
+      totalProfit, totalRate, recent, rows, displayRows
     }));
   } catch (error) {
+    const recent = summarizeRecent([], new Map(), [], today, holidays, 'closed');
     process.stdout.write(JSON.stringify({
       schemaVersion: 2, ok: false, fetchedAt: new Date().toISOString(), main: '—',
-      summary: '读取或估值失败', summaryIcon: '错误', color: 'flat', rows: [], displayRows: [], error: error.message
+      summary: '读取或估值失败', summaryIcon: '错误', color: 'flat', rows: [], displayRows: [],
+      recent, error: error.message
     }));
   }
 }
 
-module.exports = { loadHoldings, summarizeToday, navCountsToday };
+module.exports = { loadHoldings, summarizeToday, navCountsToday, returnDate, summarizeRecent, resultFromRate };
 if (require.main === module) main();
