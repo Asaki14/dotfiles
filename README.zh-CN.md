@@ -1,6 +1,6 @@
 <div align="center">
   <h1>dotfiles</h1>
-  <p><b>一套 macOS <code>~/.config</code>：omarchy 风格的平铺桌面、本地音乐库和自托管新闻阅读器，一个 <code>install.sh</code> 装好。</b></p>
+  <p><b>omarchy 风格的 macOS 配置，包含平铺桌面、终端工具、本地音乐和自托管新闻阅读器。</b></p>
   <p><a href="README.md">English</a> · 中文</p>
   <img src="https://img.shields.io/badge/macOS-26_Tahoe-black?style=flat-square&logo=apple" alt="macOS 26">
   <a href="https://github.com/Asaki14/dotfiles/commits"><img src="https://img.shields.io/github/last-commit/Asaki14/dotfiles?style=flat-square" alt="Last commit"></a>
@@ -11,7 +11,7 @@
 
 ## 夜间主题
 
-5 套桌面主题均使用 Tern 在 19:30 至次日 08:00 启用的透明外观。拍摄保留日常使用的窗口尺寸和字号。
+Tern 在 19:30 至次日 08:00 使用透明外观，白天保留单独选择的主题。
 
 <table>
   <tr>
@@ -27,21 +27,21 @@
   </tr>
 </table>
 
-运行 `theme-set <主题名>`，联动切换壁纸、状态栏及支持的 App 配色。Tern 保留单独选择的日间主题。
+用 `theme-set <主题名>` 切换壁纸、状态栏及支持的 App 配色。
 
 ## 终端工具
 
-| 工具 | Tern 中的实际界面 |
+| 工具 | 界面 |
 |---|---|
-| **yazi**：浏览文件、预览主题配置 | [![yazi 文件管理器与预览](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
-| **rmpc**：浏览本地音乐库与播放队列 | [![rmpc 音乐库](assets/layouts/single.jpg)](assets/layouts/single.jpg) |
-| **dooit**：工作区、待办与完成状态 | [![dooit 演示待办](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
+| **yazi**：文件浏览与预览 | [![yazi 文件管理器与预览](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
+| **rmpc**：本地音乐播放与队列管理 | [![rmpc 音乐库](assets/layouts/single.jpg)](assets/layouts/single.jpg) |
+| **dooit**：工作区与待办管理 | [![dooit 演示待办](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
 
-dooit 使用独立的演示数据库，不展示私人待办。
+dooit 图中使用演示待办。
 
 ## 布局
 
-以下是 AeroSpace 管理的窗口内的 Tern 窗格布局。点击图片可查看大图。
+Tern 窗口内的窗格布局。
 
 <table>
   <tr>
@@ -55,7 +55,7 @@ dooit 使用独立的演示数据库，不展示私人待办。
 </table>
 
 <details>
-<summary>观看主题、终端工具与布局操作实录</summary>
+<summary>操作演示</summary>
 
 ![真实桌面实录：5 套主题、yazi、rmpc、dooit 与 4 种窗格布局](assets/desktop-demo.gif)
 
@@ -63,11 +63,11 @@ dooit 使用独立的演示数据库，不展示私人待办。
 
 </details>
 
-全部来自这台 Mac 正在运行的桌面，不是效果图。私人通知和基金数据已遮挡，录屏不含音频。
+通知和基金数据已遮挡。
 
 ## 功能
 
-- **平铺桌面**：[omacosy](https://github.com/paulsp94/omacosy)（AeroSpace、原生状态栏、窗口边框、手势、主题）连同本配置的改动一起放在 `omacosy/src`
+- **平铺桌面**：基于 [omacosy](https://github.com/paulsp94/omacosy)，包含 AeroSpace、原生状态栏、窗口边框、手势和主题；源码及本地改动位于 `omacosy/src`
 - **状态栏数据**：天气、AI 额度、同步歌词、网速和基金盘中估值
 - **本地音乐**：beets 管理曲库，MPD 播放，rmpc 作播放器；Swift 桥接程序把 MPD 接入 macOS「正在播放」和媒体键
 - **新闻阅读**：Docker 里的 FreshRSS，阅读扩展在后台翻译外文文章
@@ -92,7 +92,7 @@ cd ~/.config && ./install.sh
 | `--no-desktop` | 跳过 omacosy 桌面（窗口管理、状态栏、主题） |
 | `--no-network` | 不按 IP 地址查询所在城市 |
 
-`install.sh` 把本机的值写进 gitignore 的文件，仓库本身不含任何个人值：
+`install.sh` 将本机配置写入以下文件，不纳入 Git：
 
 | 文件 | 来源 |
 |---|---|

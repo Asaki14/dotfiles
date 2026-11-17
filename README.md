@@ -1,6 +1,6 @@
 <div align="center">
   <h1>dotfiles</h1>
-  <p><b>A macOS <code>~/.config</code>: an omarchy-style tiling desktop, a local music library and a self-hosted news reader, set up by one <code>install.sh</code>.</b></p>
+  <p><b>macOS dotfiles for an omarchy-style tiling desktop, terminal tools, local music and a self-hosted news reader.</b></p>
   <p>English · <a href="README.zh-CN.md">中文</a></p>
   <img src="https://img.shields.io/badge/macOS-26_Tahoe-black?style=flat-square&logo=apple" alt="macOS 26">
   <a href="https://github.com/Asaki14/dotfiles/commits"><img src="https://img.shields.io/github/last-commit/Asaki14/dotfiles?style=flat-square" alt="Last commit"></a>
@@ -11,7 +11,7 @@
 
 ## Night themes
 
-All five desktop themes use Tern's transparent appearance, active from 19:30 to 08:00. Captures keep my everyday window size and font size.
+Tern uses a transparent appearance from 19:30 to 08:00 and a separately selected theme during the day.
 
 <table>
   <tr>
@@ -27,21 +27,21 @@ All five desktop themes use Tern's transparent appearance, active from 19:30 to 
   </tr>
 </table>
 
-Switch the wallpaper, bars and supported app palettes with `theme-set <name>`. Tern keeps its independently selected daytime theme.
+Use `theme-set <name>` to switch the wallpaper, bars and supported app palettes.
 
 ## Terminal tools
 
-| Tool | Running in Tern |
+| Tool | Preview |
 |---|---|
-| **yazi**: browse files and preview theme configuration | [![yazi file manager and preview](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
-| **rmpc**: browse the local music library and playback queue | [![rmpc music library](assets/layouts/single.jpg)](assets/layouts/single.jpg) |
-| **dooit**: workspaces, tasks and completion | [![dooit with demonstration tasks](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
+| **yazi**: file browsing and previews | [![yazi file manager and preview](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
+| **rmpc**: local music playback and queue management | [![rmpc music library](assets/layouts/single.jpg)](assets/layouts/single.jpg) |
+| **dooit**: workspaces and task management | [![dooit with demonstration tasks](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
 
-dooit uses a separate demonstration database; personal tasks are not shown.
+The dooit screenshots use demonstration tasks.
 
 ## Layouts
 
-Tern panes inside the AeroSpace-managed window. Click a screenshot for the full-size view.
+Pane layouts within a Tern window.
 
 <table>
   <tr>
@@ -55,7 +55,7 @@ Tern panes inside the AeroSpace-managed window. Click a screenshot for the full-
 </table>
 
 <details>
-<summary>Watch the themes, terminal tools and layouts in use</summary>
+<summary>Demo</summary>
 
 ![Real desktop recording of five themes, yazi, rmpc, dooit and four pane layouts](assets/desktop-demo.gif)
 
@@ -63,11 +63,11 @@ Tern panes inside the AeroSpace-managed window. Click a screenshot for the full-
 
 </details>
 
-All captures use this Mac's running desktop, not mockups. Private notifications and fund readouts are masked; the recording has no audio.
+Notifications and fund readouts are masked.
 
 ## Features
 
-- **Tiling desktop**: [omacosy](https://github.com/paulsp94/omacosy) (AeroSpace, a native status bar, borders, gestures, themes) is vendored in `omacosy/src` with this setup's changes
+- **Tiling desktop**: based on [omacosy](https://github.com/paulsp94/omacosy), with AeroSpace, a native status bar, borders, gestures and themes. Source and local changes are in `omacosy/src`
 - **Status bar data**: weather, AI quota, synced lyrics, net speed and an intraday fund estimate
 - **Local music**: beets keeps the library, MPD plays it, rmpc is the player, and a Swift bridge puts MPD on macOS Now Playing and the media keys
 - **News reader**: FreshRSS in Docker with a reader extension that translates articles in the background
@@ -92,7 +92,7 @@ If `~/.config` already exists, clone anywhere else: `install.sh` then links each
 | `--no-desktop` | Skip the omacosy desktop (window manager, bar, themes) |
 | `--no-network` | Do not look up the city from the IP address |
 
-`install.sh` writes this machine's values into gitignored files, so the repo itself holds none:
+`install.sh` writes machine-specific settings to these gitignored files:
 
 | File | Detected from |
 |---|---|
