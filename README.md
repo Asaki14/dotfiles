@@ -7,7 +7,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Asaki14/dotfiles?style=flat-square" alt="License"></a>
 </div>
 
-![The Osaka Jade desktop with Neovim, dooit and yazi in a transparent three-pane Tern workspace](assets/layouts/three-pane.jpg)
+https://github.com/user-attachments/assets/cff35f92-4b75-45cd-8fff-79111d707f22
 
 Built on [omacosy](https://github.com/paulsp94/omacosy), this setup brings window management, the status bar and everyday terminal tools under shared themes and shortcuts.
 
@@ -24,15 +24,15 @@ Tern stays transparent and follows the desktop theme throughout the day.
 
 <table>
   <tr>
-    <td><b>Osaka Jade</b><br><a href="assets/themes/osaka-jade.jpg"><img src="assets/themes/osaka-jade.jpg" width="480" alt="Osaka Jade: green desktop and music player"></a></td>
-    <td><b>Catppuccin</b><br><a href="assets/themes/catppuccin.jpg"><img src="assets/themes/catppuccin.jpg" width="480" alt="Catppuccin: pastel desktop and music player"></a></td>
+    <td><b>Osaka Jade</b><br><a href="assets/themes/osaka-jade.jpg"><img src="assets/themes/osaka-jade.jpg" width="480" alt="Osaka Jade: green palette, left capsule bar and a three-pane terminal"></a></td>
+    <td><b>Catppuccin</b><br><a href="assets/themes/catppuccin.jpg"><img src="assets/themes/catppuccin.jpg" width="480" alt="Catppuccin: pastel palette, bottom music strip and a three-pane terminal"></a></td>
   </tr>
   <tr>
-    <td><b>Gruvbox</b><br><a href="assets/themes/gruvbox.jpg"><img src="assets/themes/gruvbox.jpg" width="480" alt="Gruvbox: warm desktop and music player"></a></td>
-    <td><b>Tokyo Night</b><br><a href="assets/themes/tokyo-night.jpg"><img src="assets/themes/tokyo-night.jpg" width="480" alt="Tokyo Night: blue desktop and music player"></a></td>
+    <td><b>Gruvbox</b><br><a href="assets/themes/gruvbox.jpg"><img src="assets/themes/gruvbox.jpg" width="480" alt="Gruvbox: warm palette, bottom fund strip and a three-pane terminal"></a></td>
+    <td><b>Tokyo Night</b><br><a href="assets/themes/tokyo-night.jpg"><img src="assets/themes/tokyo-night.jpg" width="480" alt="Tokyo Night: blue palette, bottom AI and lyrics strip and a three-pane terminal"></a></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><b>Rosé Pine</b><br><a href="assets/themes/rose-pine.jpg"><img src="assets/themes/rose-pine.jpg" width="480" alt="Rosé Pine: muted pink desktop and transparent music player"></a></td>
+    <td colspan="2" align="center"><b>Rosé Pine</b><br><a href="assets/themes/rose-pine.jpg"><img src="assets/themes/rose-pine.jpg" width="480" alt="Rosé Pine: muted pink palette, classic top bar and a three-pane terminal"></a></td>
   </tr>
 </table>
 
@@ -42,11 +42,9 @@ Use `theme-set <name>` to switch the wallpaper, bars and supported app palettes.
 
 | Tool | Preview |
 |---|---|
-| **yazi**: file browsing and previews | [![yazi file manager and preview](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
+| **yazi**: file browsing and previews | [![yazi previewing a wallpaper](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
 | **rmpc**: local music playback and queue management | [![rmpc music library](assets/layouts/single.jpg)](assets/layouts/single.jpg) |
-| **dooit**: workspaces and task management | [![dooit with demonstration tasks](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
-
-The dooit screenshots use demonstration tasks.
+| **dooit**: workspaces and task management | [![dooit task list](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
 
 ## Layouts
 
@@ -59,18 +57,9 @@ Pane layouts within a Tern window.
   </tr>
   <tr>
     <td><b>Stacked: editor above files</b><br><a href="assets/layouts/stacked.jpg"><img src="assets/layouts/stacked.jpg" width="480" alt="Neovim and yazi in two rows"></a></td>
-    <td><b>Three panes: editor + tasks + files</b><br><a href="assets/layouts/three-pane.jpg"><img src="assets/layouts/three-pane.jpg" width="480" alt="Neovim and dooit on the left, yazi on the right"></a></td>
+    <td><b>Three panes: editor + files + tasks</b><br><a href="assets/layouts/three-pane.jpg"><img src="assets/layouts/three-pane.jpg" width="480" alt="Neovim on the left, yazi above dooit on the right"></a></td>
   </tr>
 </table>
-
-<details>
-<summary>Demo</summary>
-
-![Real desktop recording of five themes, yazi, rmpc, dooit and four pane layouts](assets/desktop-demo.gif)
-
-[Watch the recording (MP4)](assets/desktop-demo.mp4)
-
-</details>
 
 ## Everyday use
 

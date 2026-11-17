@@ -7,7 +7,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Asaki14/dotfiles?style=flat-square" alt="License"></a>
 </div>
 
-![Osaka Jade 真实桌面：透明 Tern 三窗格中的 Neovim、dooit 和 yazi](assets/layouts/three-pane.jpg)
+https://github.com/user-attachments/assets/cff35f92-4b75-45cd-8fff-79111d707f22
 
 这套配置基于 [omacosy](https://github.com/paulsp94/omacosy)，把窗口管理、状态栏和常用终端工具放在同一套主题与快捷键下。
 
@@ -24,15 +24,15 @@ Tern 全天使用透明外观，配色随桌面主题切换。
 
 <table>
   <tr>
-    <td><b>Osaka Jade</b><br><a href="assets/themes/osaka-jade.jpg"><img src="assets/themes/osaka-jade.jpg" width="480" alt="Osaka Jade：绿色桌面与音乐播放器"></a></td>
-    <td><b>Catppuccin</b><br><a href="assets/themes/catppuccin.jpg"><img src="assets/themes/catppuccin.jpg" width="480" alt="Catppuccin：柔和配色桌面与音乐播放器"></a></td>
+    <td><b>Osaka Jade</b><br><a href="assets/themes/osaka-jade.jpg"><img src="assets/themes/osaka-jade.jpg" width="480" alt="Osaka Jade：绿色配色、左侧胶囊栏与三窗格终端"></a></td>
+    <td><b>Catppuccin</b><br><a href="assets/themes/catppuccin.jpg"><img src="assets/themes/catppuccin.jpg" width="480" alt="Catppuccin：柔和配色、底部音乐条与三窗格终端"></a></td>
   </tr>
   <tr>
-    <td><b>Gruvbox</b><br><a href="assets/themes/gruvbox.jpg"><img src="assets/themes/gruvbox.jpg" width="480" alt="Gruvbox：暖色桌面与音乐播放器"></a></td>
-    <td><b>Tokyo Night</b><br><a href="assets/themes/tokyo-night.jpg"><img src="assets/themes/tokyo-night.jpg" width="480" alt="Tokyo Night：蓝色桌面与音乐播放器"></a></td>
+    <td><b>Gruvbox</b><br><a href="assets/themes/gruvbox.jpg"><img src="assets/themes/gruvbox.jpg" width="480" alt="Gruvbox：暖色配色、底部基金条与三窗格终端"></a></td>
+    <td><b>Tokyo Night</b><br><a href="assets/themes/tokyo-night.jpg"><img src="assets/themes/tokyo-night.jpg" width="480" alt="Tokyo Night：蓝色配色、底部 AI 额度与歌词条、三窗格终端"></a></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><b>Rosé Pine</b><br><a href="assets/themes/rose-pine.jpg"><img src="assets/themes/rose-pine.jpg" width="480" alt="Rosé Pine：玫瑰色桌面与透明音乐播放器"></a></td>
+    <td colspan="2" align="center"><b>Rosé Pine</b><br><a href="assets/themes/rose-pine.jpg"><img src="assets/themes/rose-pine.jpg" width="480" alt="Rosé Pine：玫瑰色配色、经典顶栏与三窗格终端"></a></td>
   </tr>
 </table>
 
@@ -42,11 +42,9 @@ Tern 全天使用透明外观，配色随桌面主题切换。
 
 | 工具 | 界面 |
 |---|---|
-| **yazi**：文件浏览与预览 | [![yazi 文件管理器与预览](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
+| **yazi**：文件浏览与预览 | [![yazi 预览壁纸](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
 | **rmpc**：本地音乐播放与队列管理 | [![rmpc 音乐库](assets/layouts/single.jpg)](assets/layouts/single.jpg) |
-| **dooit**：工作区与待办管理 | [![dooit 演示待办](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
-
-dooit 图中使用演示待办。
+| **dooit**：工作区与待办管理 | [![dooit 待办列表](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
 
 ## 布局
 
@@ -59,18 +57,9 @@ Tern 窗口内的窗格布局。
   </tr>
   <tr>
     <td><b>上下排列：编辑器与文件</b><br><a href="assets/layouts/stacked.jpg"><img src="assets/layouts/stacked.jpg" width="480" alt="上下排列的 Neovim 与 yazi"></a></td>
-    <td><b>三窗格：编辑器、待办与文件</b><br><a href="assets/layouts/three-pane.jpg"><img src="assets/layouts/three-pane.jpg" width="480" alt="左侧 Neovim 和 dooit，右侧 yazi"></a></td>
+    <td><b>三窗格：编辑器、文件与待办</b><br><a href="assets/layouts/three-pane.jpg"><img src="assets/layouts/three-pane.jpg" width="480" alt="左侧 Neovim，右侧上 yazi 下 dooit"></a></td>
   </tr>
 </table>
-
-<details>
-<summary>操作演示</summary>
-
-![真实桌面实录：5 套主题、yazi、rmpc、dooit 与 4 种窗格布局](assets/desktop-demo.gif)
-
-[观看录屏（MP4）](assets/desktop-demo.mp4)
-
-</details>
 
 ## 日常使用
 
