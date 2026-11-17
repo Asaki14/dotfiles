@@ -7,6 +7,64 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Asaki14/dotfiles?style=flat-square" alt="License"></a>
 </div>
 
+![Osaka Jade 真实桌面：透明 Tern 三窗格中的 Neovim、dooit 和 yazi](assets/layouts/three-pane.jpg)
+
+## 夜间主题
+
+5 套桌面主题均使用 Tern 在 19:30 至次日 08:00 启用的透明外观。拍摄保留日常使用的窗口尺寸和字号。
+
+<table>
+  <tr>
+    <td><b>Osaka Jade</b><br><a href="assets/themes/osaka-jade.jpg"><img src="assets/themes/osaka-jade.jpg" width="480" alt="Osaka Jade：绿色桌面与音乐播放器"></a></td>
+    <td><b>Catppuccin</b><br><a href="assets/themes/catppuccin.jpg"><img src="assets/themes/catppuccin.jpg" width="480" alt="Catppuccin：柔和配色桌面与音乐播放器"></a></td>
+  </tr>
+  <tr>
+    <td><b>Gruvbox</b><br><a href="assets/themes/gruvbox.jpg"><img src="assets/themes/gruvbox.jpg" width="480" alt="Gruvbox：暖色桌面与音乐播放器"></a></td>
+    <td><b>Tokyo Night</b><br><a href="assets/themes/tokyo-night.jpg"><img src="assets/themes/tokyo-night.jpg" width="480" alt="Tokyo Night：蓝色桌面与音乐播放器"></a></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><b>Rosé Pine</b><br><a href="assets/themes/rose-pine.jpg"><img src="assets/themes/rose-pine.jpg" width="480" alt="Rosé Pine：玫瑰色桌面与透明音乐播放器"></a></td>
+  </tr>
+</table>
+
+运行 `theme-set <主题名>`，联动切换壁纸、状态栏及支持的 App 配色。Tern 保留单独选择的日间主题。
+
+## 终端工具
+
+| 工具 | Tern 中的实际界面 |
+|---|---|
+| **yazi**：浏览文件、预览主题配置 | [![yazi 文件管理器与预览](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
+| **rmpc**：浏览本地音乐库与播放队列 | [![rmpc 音乐库](assets/layouts/single.jpg)](assets/layouts/single.jpg) |
+| **dooit**：工作区、待办与完成状态 | [![dooit 演示待办](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
+
+dooit 使用独立的演示数据库，不展示私人待办。
+
+## 布局
+
+以下是 AeroSpace 管理的窗口内的 Tern 窗格布局。点击图片可查看大图。
+
+<table>
+  <tr>
+    <td><b>单窗格：音乐库</b><br><a href="assets/layouts/single.jpg"><img src="assets/layouts/single.jpg" width="480" alt="单窗格 rmpc 音乐库"></a></td>
+    <td><b>左右双栏：编辑器与文件</b><br><a href="assets/layouts/columns.jpg"><img src="assets/layouts/columns.jpg" width="480" alt="左右排列的 Neovim 与 yazi"></a></td>
+  </tr>
+  <tr>
+    <td><b>上下排列：编辑器与文件</b><br><a href="assets/layouts/stacked.jpg"><img src="assets/layouts/stacked.jpg" width="480" alt="上下排列的 Neovim 与 yazi"></a></td>
+    <td><b>三窗格：编辑器、待办与文件</b><br><a href="assets/layouts/three-pane.jpg"><img src="assets/layouts/three-pane.jpg" width="480" alt="左侧 Neovim 和 dooit，右侧 yazi"></a></td>
+  </tr>
+</table>
+
+<details>
+<summary>观看主题、终端工具与布局操作实录</summary>
+
+![真实桌面实录：5 套主题、yazi、rmpc、dooit 与 4 种窗格布局](assets/desktop-demo.gif)
+
+[观看 59 秒录屏（MP4）](assets/desktop-demo.mp4)
+
+</details>
+
+全部来自这台 Mac 正在运行的桌面，不是效果图。私人通知和基金数据已遮挡，录屏不含音频。
+
 ## 功能
 
 - **平铺桌面**：[omacosy](https://github.com/paulsp94/omacosy)（AeroSpace、原生状态栏、窗口边框、手势、主题）连同本配置的改动一起放在 `omacosy/src`

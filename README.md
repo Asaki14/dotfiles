@@ -7,6 +7,64 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Asaki14/dotfiles?style=flat-square" alt="License"></a>
 </div>
 
+![The Osaka Jade desktop with Neovim, dooit and yazi in a transparent three-pane Tern workspace](assets/layouts/three-pane.jpg)
+
+## Night themes
+
+All five desktop themes use Tern's transparent appearance, active from 19:30 to 08:00. Captures keep my everyday window size and font size.
+
+<table>
+  <tr>
+    <td><b>Osaka Jade</b><br><a href="assets/themes/osaka-jade.jpg"><img src="assets/themes/osaka-jade.jpg" width="480" alt="Osaka Jade: green desktop and music player"></a></td>
+    <td><b>Catppuccin</b><br><a href="assets/themes/catppuccin.jpg"><img src="assets/themes/catppuccin.jpg" width="480" alt="Catppuccin: pastel desktop and music player"></a></td>
+  </tr>
+  <tr>
+    <td><b>Gruvbox</b><br><a href="assets/themes/gruvbox.jpg"><img src="assets/themes/gruvbox.jpg" width="480" alt="Gruvbox: warm desktop and music player"></a></td>
+    <td><b>Tokyo Night</b><br><a href="assets/themes/tokyo-night.jpg"><img src="assets/themes/tokyo-night.jpg" width="480" alt="Tokyo Night: blue desktop and music player"></a></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><b>Rosé Pine</b><br><a href="assets/themes/rose-pine.jpg"><img src="assets/themes/rose-pine.jpg" width="480" alt="Rosé Pine: muted pink desktop and transparent music player"></a></td>
+  </tr>
+</table>
+
+Switch the wallpaper, bars and supported app palettes with `theme-set <name>`. Tern keeps its independently selected daytime theme.
+
+## Terminal tools
+
+| Tool | Running in Tern |
+|---|---|
+| **yazi**: browse files and preview theme configuration | [![yazi file manager and preview](assets/tools/yazi.jpg)](assets/tools/yazi.jpg) |
+| **rmpc**: browse the local music library and playback queue | [![rmpc music library](assets/layouts/single.jpg)](assets/layouts/single.jpg) |
+| **dooit**: workspaces, tasks and completion | [![dooit with demonstration tasks](assets/tools/dooit.jpg)](assets/tools/dooit.jpg) |
+
+dooit uses a separate demonstration database; personal tasks are not shown.
+
+## Layouts
+
+Tern panes inside the AeroSpace-managed window. Click a screenshot for the full-size view.
+
+<table>
+  <tr>
+    <td><b>Single pane: music</b><br><a href="assets/layouts/single.jpg"><img src="assets/layouts/single.jpg" width="480" alt="Single-pane rmpc music library"></a></td>
+    <td><b>Side by side: editor + files</b><br><a href="assets/layouts/columns.jpg"><img src="assets/layouts/columns.jpg" width="480" alt="Neovim and yazi in two columns"></a></td>
+  </tr>
+  <tr>
+    <td><b>Stacked: editor above files</b><br><a href="assets/layouts/stacked.jpg"><img src="assets/layouts/stacked.jpg" width="480" alt="Neovim and yazi in two rows"></a></td>
+    <td><b>Three panes: editor + tasks + files</b><br><a href="assets/layouts/three-pane.jpg"><img src="assets/layouts/three-pane.jpg" width="480" alt="Neovim and dooit on the left, yazi on the right"></a></td>
+  </tr>
+</table>
+
+<details>
+<summary>Watch the themes, terminal tools and layouts in use</summary>
+
+![Real desktop recording of five themes, yazi, rmpc, dooit and four pane layouts](assets/desktop-demo.gif)
+
+[Watch the 59-second recording (MP4)](assets/desktop-demo.mp4)
+
+</details>
+
+All captures use this Mac's running desktop, not mockups. Private notifications and fund readouts are masked; the recording has no audio.
+
 ## Features
 
 - **Tiling desktop**: [omacosy](https://github.com/paulsp94/omacosy) (AeroSpace, a native status bar, borders, gestures, themes) is vendored in `omacosy/src` with this setup's changes
