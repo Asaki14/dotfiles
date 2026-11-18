@@ -112,8 +112,11 @@ cmd-ctrl-alt-enter = 'exec-and-forget $HOME/.local/bin/omacosy-focus-or-spawn "@
 # browser unless BROWSER names one, and resolves that at press time
 cmd-ctrl-alt-shift-enter = 'exec-and-forget $HOME/.local/bin/omacosy-browser'
 
-# Tinycast launcher (Command+Space).
-cmd-space = 'exec-and-forget open tinycast://'
+# Command+Space belongs to Tinycast's own hotkey, not an aerospace binding:
+# `open tinycast://` makes LaunchServices activate Tinycast, so after a
+# clipboard paste or dismissal focus stays on the windowless Tinycast and
+# keystrokes go nowhere. The native hotkey shows a non-activating panel and
+# the previous app keeps focus.
 
 # Close window (omarchy: Super+W)
 cmd-ctrl-alt-w = 'close'
