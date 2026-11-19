@@ -49,7 +49,7 @@ Syntax-check other changed Fish or shell files individually. A shell's `-n` opti
 
 ## Code Conventions & Common Patterns
 
-Match the language, indentation, naming, and configuration syntax of the file being edited. Keep changes surgical and comments focused on intent. Use concise Conventional Commit subjects such as `fix: ...` or `chore: ...`.
+Use concise Conventional Commit subjects such as `fix: ...` or `chore: ...`.
 
 | Pattern | Preserve when changing code |
 | --- | --- |
@@ -87,4 +87,4 @@ Herdr, personal Ghostty configuration, Raycast, Newsboat, md-tui and fastfetch w
 
 No repository-wide test framework, CI workflow, or coverage threshold was found. Syntax checks establish parsing only. After behavioral changes, exercise the affected consumer: open a feed article, verify playback and media controls, switch Tern panes, or inspect the changed desktop/Tinycast command. Avoid unrelated installers, service restarts, package-manager operations, or system-action commands.
 
-For Tinycast, follow the import and permission table in the README's Tinycast section. For native helpers, distinguish compilation from installation and service reloads. Review the scoped diff for secrets and generated state before committing. Document only checks actually run; do not imply syntax validation proves runtime behavior.
+For Tinycast, follow the import and permission table in the README's Tinycast section. For native helpers, distinguish compilation from installation and service reloads. Review the scoped diff for secrets and generated state before committing.
