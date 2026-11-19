@@ -167,6 +167,12 @@ printf 'TERMINAL=Tern\n' > omacosy/src/config/apps.local.conf
 
 本机数据文件不纳入 Git。API key 放在已忽略的 `fish/conf.d/api_keys.local.fish`，不要写入公开配置。
 
+### 批量生成微信卡片
+
+在 Tinycast 中打开 **Settings → Commands → Import Raycast Scripts**，选中 `~/.config/tinycast/scripts`，再为 **Batch WeChat Cards** 绑定快捷键。保持 **Show output** 关闭，以免微信失去焦点。在 macOS 设置中授予 Tinycast「辅助功能」和「屏幕与系统音频录制」权限。在 `~/.config/tinycast/wechat-card.local.conf` 中写一行固定封面图片的绝对路径。
+
+复制一张或多张卡片的钉钉原文，保留「标题：」和「描述：」。链接可以单独成行，也可以放在标题行末尾。标题最多 25 字，描述最多 35 字。在 Mac 微信打开 e 码特公众号并展开窗口，按下快捷键后不要切换应用。脚本将逐张选择一个月有效期并提交，不会转发卡片。如果一批中途停止，先在公众号核对已收到的卡片，再只复制剩余的卡片重跑。
+
 ## 配置位置
 
 | 路径 | 内容 |
