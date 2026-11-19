@@ -171,7 +171,7 @@ Machine-specific data files are gitignored. Put API keys in the ignored `fish/co
 
 In Tinycast, open **Settings → Commands → Import Raycast Scripts**, select `~/.config/tinycast/scripts`, and assign a shortcut to **Batch WeChat Cards**. Leave **Show output** off so WeChat stays in front. Grant Tinycast Accessibility and Screen & System Audio Recording permissions. Put the absolute path to your cover image on one line in `~/.config/tinycast/wechat-card.local.conf`.
 
-Copy one or more DingTalk cards with their `标题：` and `描述：` lines. Put each link on its own line or at the end of its title line. The title limit is 25 characters and the description limit is 35. Open the e 码特 official account in desktop WeChat, expand the window, and run the shortcut without switching apps. The script sets a one-month expiry and submits each card. It does not forward them. If a batch stops, check the official account and copy only the remaining cards before running it again.
+Copy one or more DingTalk cards with their `标题：` and `描述：` lines. Put each link on its own line or at the end of its title line. The title limit is 25 characters and the description limit is 35. Open the main e 码特 chat in desktop WeChat, expand the window, and run the shortcut without switching apps. The script sends one text message to e 码特 per batch, then submits each card with a one-month expiry. It does not forward cards. If a batch stops, check the official account and copy only the remaining cards before running it again.
 
 ## Configuration locations
 

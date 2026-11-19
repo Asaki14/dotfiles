@@ -89,6 +89,21 @@ struct View {
     func find(_ text: String, inRightPane: Bool = true) -> TextHit? {
         hits.first { $0.text.contains(text) && (!inRightPane || $0.box.midX > bounds.minX + bounds.width * 0.46) }
     }
+
+    var isEMartChat: Bool {
+        hits.contains {
+            $0.text == "e码特" && $0.box.minX > bounds.minX + 180 &&
+                $0.box.maxY < bounds.minY + 55
+        }
+    }
+
+    var accountMenu: CGPoint? {
+        let bottom = hits.filter { $0.box.midY > bounds.maxY - 65 }
+        guard let guide = bottom.first(where: { $0.text.contains("服务指引") }),
+              let user = bottom.first(where: { $0.text.contains("用户中心") }),
+              abs(guide.center.y - user.center.y) < 10, guide.center.x < user.center.x else { return nil }
+        return CGPoint(x: (guide.center.x + user.center.x) / 2, y: (guide.center.y + user.center.y) / 2)
+    }
     func preview(in area: CGRect) -> Data? {
         let sx = CGFloat(image.width) / bounds.width, sy = CGFloat(image.height) / bounds.height
         let region = area.offsetBy(dx: -bounds.minX, dy: -bounds.minY).applying(CGAffineTransform(scaleX: sx, y: sy)).integral
@@ -243,18 +258,62 @@ final class WeChat {
         try key(9, .maskCommand)
     }
 
+    func sendBatchMessage() throws {
+        let start = try wait("请先打开 e 码特公众号的主会话，并关闭制卡表单。") { () throws -> View? in
+            guard app.isActive else { return nil }
+            let view = try snap()
+            return view.isEMartChat && view.find("e码特｜") == nil ? view : nil
+        }
+        if let menu = start.accountMenu {
+            try click(CGPoint(x: start.bounds.maxX - 38, y: menu.y))
+        }
+        let composer = try wait("未打开 e 码特消息输入框。") {
+            let view = try snap()
+            return view.isEMartChat && view.accountMenu == nil ? view : nil
+        }
+        let draftPoint = CGPoint(x: composer.bounds.midX, y: composer.bounds.maxY - 57)
+        try click(draftPoint)
+        guard clipboard.changeCount == clipboardChange else { throw CardError("剪贴板在运行中被改动；已停止。") }
+        try key(0, .maskCommand)
+        try key(8, .maskCommand)
+        if clipboard.changeCount != clipboardChange {
+            clipboardChange = clipboard.changeCount
+            didPaste = true
+            throw CardError("e 码特输入区已有内容，未发送。请先处理草稿。")
+        }
+        let code = Int(Date().timeIntervalSince1970) % 1_000_000
+        let message = String(format: "制卡%06d", code)
+        try paste(message)
+        _ = try wait("未在 e 码特输入框确认待发送消息；未生成卡片。") {
+            let view = try snap()
+            return view.isEMartChat && view.accountMenu == nil && view.hits.contains {
+                $0.text == message && $0.center.x > view.bounds.minX + 240 &&
+                    $0.center.x < view.bounds.midX && $0.center.y > view.bounds.maxY - 300
+            } ? true : nil
+        }
+        try key(36)
+        let sent = try wait("未确认制卡消息已发出。请检查公众号会话；未生成卡片。") { () throws -> View? in
+            let view = try snap()
+            return view.isEMartChat && view.hits.contains {
+                $0.text == message && $0.center.x > view.bounds.midX && $0.center.y < view.bounds.maxY - 85
+            } ? view : nil
+        }
+        try click(CGPoint(x: sent.bounds.maxX - 68, y: sent.bounds.maxY - 35))
+        _ = try wait("消息已发，但未切回公众号菜单；未生成卡片。") { try snap().accountMenu }
+    }
+
     func openForm() throws -> View {
         let start = try wait("请先打开 e 码特公众号会话。") { () throws -> View? in
             guard app.isActive else { return nil }
             let view = try snap()
             return view.find("点击卡片后") != nil ||
-                (view.find("e码特", inRightPane: false) != nil && view.find("点击使用", inRightPane: false) != nil) ? view : nil
+                (view.isEMartChat && view.accountMenu != nil) ? view : nil
         }
         if start.find("点击卡片后") != nil { return start }
         if let entry = start.find("微信分享卡片") {
             try click(entry.center)
-        } else if let use = start.find("点击使用", inRightPane: false) {
-            try click(use.center)
+        } else if let use = start.accountMenu {
+            try click(use)
             let entry = try wait("找不到「微信分享卡片」入口。") { try snap().find("微信分享卡片") }
             try click(entry.center)
         }
@@ -350,6 +409,8 @@ func run() throws {
     defer { try? FileManager.default.removeItem(at: directory) }
     let wechat = try WeChat(screenFile: directory.appendingPathComponent("window.png"))
     defer { wechat.restoreClipboard() }
+    try wechat.sendBatchMessage()
+    print("已向 e 码特发送本批制卡消息")
     for (index, card) in cards.enumerated() {
         do {
             try wechat.generate(wechat.fill(card, cover: cover))
