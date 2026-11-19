@@ -521,13 +521,22 @@ final class Motion: NSObject {
     }
 
     private func kick() {
-        guard displayLink == nil, let screen = NSScreen.main else { return }
+        guard displayLink == nil, let screen = NSScreen.screens.first else { return }
         let link = screen.displayLink(target: self, selector: #selector(tick(_:)))
         let fps = Float(screen.maximumFramesPerSecond)
         link.preferredFrameRateRange = CAFrameRateRange(minimum: min(30, fps),
                                                        maximum: fps, preferred: fps)
         link.add(to: .main, forMode: .common)
         displayLink = link
+    }
+
+    func screenParametersChanged() {
+        // An NSScreen display link does not follow the bar when its screen goes away.
+        guard let link = displayLink else { return }
+        link.invalidate()
+        displayLink = nil
+        lastFrame = 0
+        kick()
     }
 
     @objc private func tick(_ link: CADisplayLink) {
@@ -3773,7 +3782,8 @@ final class BarView: NSView {
     private func drawChips(_ shown: [String], surface: BarSurface, sid: CGDirectDisplayID,
                            from start: CGFloat, chipFont: NSFont, iconFont: NSFont) -> CGFloat {
         let step = chipBox + chipPad * 2
-        let bracketW = motion.value("bracket.\(sid)", CGFloat(shown.count) * step)
+        let bracketW = motion.value("bracket.\(sid)", CGFloat(shown.count) * step,
+                                    duration: workspaceIndicatorDuration)
         let bracket = NSRect(x: start, y: (barHeight - pillHeight) / 2,
                              width: bracketW, height: pillHeight)
         drawPillBG(bracket)
@@ -3782,9 +3792,10 @@ final class BarView: NSView {
         // focused workspace is not a useful answer on the other screen's
         // bar: docked, it never matched there and the laptop had no "you
         // are here" at all.
-        if let index = shown.firstIndex(of: surface.visible) {
-            let fx = motion.value("focus.\(sid)", start + CGFloat(index) * step + chipPad,
-                                  duration: workspaceIndicatorDuration)
+        if bracketW >= step, let index = shown.firstIndex(of: surface.visible) {
+            let offset = motion.value("focus.\(sid)", CGFloat(index) * step + chipPad,
+                                      duration: workspaceIndicatorDuration)
+            let fx = start + min(max(chipPad, offset), bracketW - chipBox - chipPad)
             let pill = NSRect(x: fx, y: (barHeight - chipPillHeight) / 2,
                               width: chipBox, height: chipPillHeight)
             switch barStyle.focus {
@@ -3801,7 +3812,8 @@ final class BarView: NSView {
         }
 
         for (index, ws) in shown.enumerated() {
-            let x = motion.value("chip.\(sid).\(ws)", start + CGFloat(index) * step)
+            let x = start + motion.value("chip.\(sid).\(ws)", CGFloat(index) * step,
+                                         duration: workspaceIndicatorDuration)
             let alpha = motion.appear("chip.\(sid).\(ws).in")
             let slot = NSRect(x: x, y: 0, width: step, height: barHeight)
             let box = slot.insetBy(dx: chipPad, dy: 0)
@@ -4672,8 +4684,10 @@ final class AuxView: NSView {
         let shown = shownWorkspaces(owner)
         let box: CGFloat = 22
         if let index = shown.firstIndex(of: owner.visible) {
-            let y = motion.value("side.focus.\(sid)", rect.maxY - CGFloat(index + 1) * sideStep
-                                     + (sideStep - box) / 2, duration: workspaceIndicatorDuration)
+            let inset = (sideStep - box) / 2
+            let offset = motion.value("side.focus.\(sid)", CGFloat(index) * sideStep + inset,
+                                      duration: workspaceIndicatorDuration)
+            let y = rect.maxY - box - min(offset, rect.height - box - inset)
             let mark = NSRect(x: bounds.midX - box / 2, y: y, width: box, height: box)
             switch barStyle.focus {
             case .underline:
@@ -4688,7 +4702,8 @@ final class AuxView: NSView {
             }
         }
         for (index, ws) in shown.enumerated() {
-            let y = motion.value("side.chip.\(sid).\(ws)", rect.maxY - CGFloat(index + 1) * sideStep)
+            let y = rect.maxY - motion.value("side.chip.\(sid).\(ws)", CGFloat(index + 1) * sideStep,
+                                             duration: workspaceIndicatorDuration)
             let alpha = motion.appear("side.chip.\(sid).\(ws).in")
             let slot = NSRect(x: 0, y: y, width: bounds.width, height: sideStep)
             let markBox = NSRect(x: bounds.midX - box / 2, y: slot.midY - box / 2, width: box, height: box)
@@ -5454,6 +5469,7 @@ var monitorCount = NSScreen.screens.count
 NotificationCenter.default.addObserver(
     forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
 ) { _ in
+    motion.screenParametersChanged()
     // At once, not after the grace below: until it runs, the new screen
     // shows the old theme. Checked again after the grace, in case the
     // count had not moved yet when the notification arrived.

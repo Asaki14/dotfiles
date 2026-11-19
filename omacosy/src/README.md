@@ -387,7 +387,9 @@ startup and does no config-file or image-file I/O while it draws.
   taller than the screen scroll. The one thing the auto-hidden native
   bar still owned, gone.
 - **Workspaces**: one segmented capsule per monitor showing only that
-  monitor's workspaces; accent pill on the focused one; click to jump.
+  monitor's workspaces. The accent pill slides between slots within the
+  capsule. Display changes rebind the animation clock to the current
+  primary display. Click a slot to jump to it.
 - **Media**: prev / play-pause / next + track title (Spotify). Centered
   on flat displays, left cluster on notched ones (per-display notch
   detection via `NSScreen.safeAreaInsets`), hidden when Spotify isn't
