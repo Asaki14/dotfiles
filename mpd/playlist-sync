@@ -29,6 +29,7 @@ import datetime
 import json
 import os
 import re
+import shlex
 import shutil
 import socket
 import subprocess
@@ -208,8 +209,10 @@ def download(artist, title, out_dir):
         if not hit:
             reasons.append(f"{source}：no matching result")
             continue
+        meta = f"ffmpeg:-metadata artist={shlex.quote(artist)} -metadata title={shlex.quote(title)}"
         ok, _, err = run_yt_dlp(["-q", "--no-warnings", "--no-playlist",
                                  "-x", "--audio-format", "opus", "--audio-quality", "0",
+                                 "--embed-thumbnail", "--postprocessor-args", meta,
                                  "-o", str(out_dir / "track.%(ext)s"),
                                  hit.get("webpage_url") or hit["url"]], youtube)
         path = out_dir / "track.opus"
@@ -325,8 +328,7 @@ def fill_missing():
             print(f"  歌词 → {lrc}")
         else:
             print("  LRCLIB 无时长相符的滚动歌词")
-    if downloaded:
-        mpd_update()
+    mpd_update()
     print(f"\n汇总：下载 {len(downloaded)} / 新增歌词 {len(lyrics)} / 失败 {len(failed)}")
     for entry, reason in failed:
         print(f"  失败 {entry}：{reason}")
