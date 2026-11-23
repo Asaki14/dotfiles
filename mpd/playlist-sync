@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """mpd/playlist-sync —— 维护 MPD 歌单并补齐缺失歌曲；歌单、歌曲文件与 .lrc 都只在本机，不进 git。
 
-歌单正本在 mpd/playlists/*.m3u（每行一个相对 ~/Music/lib 的路径；所有歌单均被 gitignore）。
+歌单正本在 mpd/playlists/*.m3u（每行一个相对 ~/Music/lib 的路径；所有歌单均被 gitignore）。手动改歌单后要跑一次 sync：
+它会把路径改写成磁盘上的实际拼写（macOS 文件名可能是 NFD，手写的 NFC 路径 MPD 认不出，报 No such song）。
 ~/.local/share/mpd/playlists 是指向它的软链，所以 mpd.conf 的 playlist_directory 不用改、MPD 不用重启。
 
 用法：mpd/playlist-sync [sync]
@@ -36,6 +37,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -71,13 +73,34 @@ def dedup(entries):
     return [e for e in entries if not (e in seen or seen.add(e))]
 
 
+def align_to_disk(entries):
+    """APFS 不区分 NFC/NFD，但 MPD 按字节比对路径；把条目改写成磁盘上的实际拼写。"""
+    listing = {}
+    out = []
+    for e in entries:
+        parent, _, name = e.rpartition("/")
+        if parent not in listing:
+            try:
+                listing[parent] = os.listdir(MUSIC / parent)
+            except OSError:
+                listing[parent] = []
+        names = listing[parent]
+        if name not in names:
+            want = unicodedata.normalize("NFC", name)
+            name = next((n for n in names if unicodedata.normalize("NFC", n) == want), name)
+        out.append(f"{parent}/{name}" if parent else name)
+    return out
+
+
 def dedup_tracked():
     for p in sorted(PLAYLISTS.glob("*.m3u")):
         entries = read_entries(p)
-        unique = dedup(entries)
+        aligned = align_to_disk(entries)
+        unique = dedup(aligned)
         if unique != entries:
             write_entries(p, unique)
-            print(f"去重：{p.name} 删掉 {len(entries) - len(unique)} 条重复")
+            rewritten = sum(a != e for a, e in zip(aligned, entries))
+            print(f"整理：{p.name} 改写拼写 {rewritten} 条、去重 {len(aligned) - len(unique)} 条")
 
 
 def ensure_link():
