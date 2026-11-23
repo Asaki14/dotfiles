@@ -223,7 +223,6 @@ cmd-ctrl-alt-shift-space = 'exec-and-forget $HOME/.local/bin/omacosy-ws 0 throw-
 
 # Apps (omarchy: Super+Shift+letter)
 cmd-ctrl-alt-shift-f = 'exec-and-forget open -a "Lark"'   # feishu
-# music moves off M so Messages can own it (omarchy's M is music upstream);
 # no music app any more: omacosy-tab lands on the terminal's rmpc tab (Tern's or herdr's)
 cmd-ctrl-alt-shift-s = 'exec-and-forget $HOME/.local/bin/omacosy-tab music rmpc' # music
 cmd-ctrl-alt-shift-n = 'exec-and-forget open http://localhost:8088/' # news (local FreshRSS)
@@ -233,7 +232,8 @@ cmd-ctrl-alt-shift-y = 'exec-and-forget $HOME/.local/bin/omacosy-tab yazi yazi' 
 cmd-ctrl-alt-shift-r = 'exec-and-forget $HOME/.local/bin/omacosy-tab 调研' # research tab
 cmd-ctrl-alt-shift-u = 'exec-and-forget $HOME/.local/bin/omacosy-tab UI' # UI tab
 cmd-ctrl-alt-shift-g = 'exec-and-forget $HOME/.local/bin/omacosy-tab 需求' # requirements tab
-cmd-ctrl-alt-shift-m = 'exec-and-forget open -a "@MESSAGES@"' # messages
+cmd-ctrl-alt-shift-i = 'exec-and-forget open -a "@MESSAGES@"' # messages
+cmd-ctrl-alt-shift-m = 'exec-and-forget open -a "Muse"' # muse
 cmd-ctrl-alt-shift-l = 'exec-and-forget open -a "@NOTES@"' # notes
 cmd-ctrl-alt-shift-e = 'exec-and-forget open -a "@ELEMENT@"'  # element (chat)
 

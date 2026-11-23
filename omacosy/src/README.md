@@ -492,7 +492,8 @@ on re-runs and names such keyboards when it finds one connected.
 | `Super+shift+d` | dooit: a tab titled `dooit …`, else a new `dooit` tab running dooit, in `TERMINAL` (`omacosy-tab`) |
 | `Super+shift+y` | yazi: a tab titled `yazi …`, else a new `yazi` tab running yazi, in `TERMINAL` (`omacosy-tab`) |
 | `Super+shift+r` / `Super+shift+u` / `Super+shift+g` | the `调研` / `UI` / `需求` tab in `TERMINAL` (`omacosy-tab`; never created). OmniWM keeps `Super+shift+g` for Messenger |
-| `Super+shift+m` | Messages (`MESSAGES` in `apps.conf`) |
+| `Super+shift+i` | Messages (`MESSAGES` in `apps.conf`) |
+| `Super+shift+m` | Muse |
 | `Super+shift+l` | Logseq (`NOTES` in `apps.conf`) |
 | `Super+shift+e` | Element (`ELEMENT` in `apps.conf`) |
 | `Super+shift+t` | next theme |
