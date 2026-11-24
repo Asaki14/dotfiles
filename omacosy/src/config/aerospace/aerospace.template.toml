@@ -225,7 +225,7 @@ cmd-ctrl-alt-shift-space = 'exec-and-forget $HOME/.local/bin/omacosy-ws 0 throw-
 cmd-ctrl-alt-shift-f = 'exec-and-forget open -a "Lark"'   # feishu
 # no music app any more: omacosy-tab lands on the terminal's rmpc tab (Tern's or herdr's)
 cmd-ctrl-alt-shift-s = 'exec-and-forget $HOME/.local/bin/omacosy-tab music rmpc' # music
-cmd-ctrl-alt-shift-n = 'exec-and-forget open http://localhost:8088/' # news (local FreshRSS)
+cmd-ctrl-alt-shift-n = 'exec-and-forget open -a NetNewsWire' # news (NetNewsWire)
 cmd-ctrl-alt-shift-a = 'exec-and-forget $HOME/.local/bin/omacosy-tab Agent' # Agent session (resume last focus)
 cmd-ctrl-alt-shift-d = 'exec-and-forget $HOME/.local/bin/omacosy-tab dooit dooit' # dooit
 cmd-ctrl-alt-shift-y = 'exec-and-forget $HOME/.local/bin/omacosy-tab yazi yazi' # yazi (files)

@@ -23,10 +23,9 @@ brew "yt-dlp"          # mpd fish
 brew "rmpc"            # rmpc
 brew "cava"            # rmpc
 brew "beets"           # beets
-brew "colima"          # freshrss
-brew "docker"          # freshrss
-brew "docker-compose"  # freshrss
-brew "uv"              # freshrss
+brew "colima"          # immich
+brew "docker"          # immich
+brew "docker-compose"  # immich
 cask "karabiner-elements" # karabiner
 cask "linearmouse"     # linearmouse
 cask "tinycast"        # tinycast

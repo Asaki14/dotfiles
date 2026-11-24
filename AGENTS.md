@@ -12,7 +12,6 @@ This repository is the public `Asaki14/dotfiles`, checked out as `~/.config` its
 | Themes | OMacOSy reads `omarchy/current/theme` and renders app-specific themes. Preserve this theme entry point even though its name looks historical. |
 | Music | Beets manages `~/Music/lib`; MPD serves it to rmpc. `mpd/playlist-sync` links the local playlists for MPD, removes duplicates, fetches missing tracks, and refreshes MPD. Playlists are local only; only `mpd/playlists/example.m3u` is tracked. |
 | System media | `mpd/nowplaying/mpd-nowplaying.swift` polls MPD through its Unix socket, publishes macOS Now Playing state, and sends media-key commands back to MPD. |
-| News | FreshRSS runs in Docker (`freshrss/compose.yaml`); its `LocalReader` extension and `freshrss/reader.py` translate articles in the background. Setup and operation are in the README's FreshRSS section. |
 | Input source | Tern focus/title events enter a Luau policy, which debounces pane changes and invokes a Swift helper to select the macOS input source. |
 
 `/tmp/sketchybar_daemon` is a cache interface still used by OMacOSy helpers, not evidence of an active SketchyBar installation. Do not rename it without migrating its consumers.
@@ -26,7 +25,6 @@ Active bar helpers live in `omacosy/scripts/`. In `omacosy/bar-items.conf`, the 
 | `fish/`, `nvim/`, `yazi/` | Shell environment, editor configuration, and file-manager configuration. |
 | `omacosy/` | Bar layout and status-bar data providers; the desktop itself is in `omacosy/src/`, which has its own `AGENTS.md`. |
 | `mpd/`, `rmpc/`, `beets/` | Playlist automation, macOS media bridge, playback configuration, and library management. |
-| `freshrss/` | FreshRSS deployment, reader extension, and translation worker. |
 | `tern/plugins/input-source-policy/` | Luau event policy, Swift helper source, and compile-on-demand wrapper. |
 | `tinycast/scripts/` | Tinycast system commands in Raycast script format. Import the directory on each machine as the README's Tinycast section describes. |
 | `homebrew/` | Local trust records, excluded from Git. `/opt/homebrew/etc/homebrew/brew.env` selects this directory through `HOMEBREW_XDG_CONFIG_HOME`. |
@@ -54,7 +52,6 @@ Use concise Conventional Commit subjects such as `fix: ...` or `chore: ...`.
 | Pattern | Preserve when changing code |
 | --- | --- |
 | Process boundaries | Existing CLIs, configuration files, and stdout TSV/JSON connect tools. There is no shared dependency-injection container or global application state. |
-| Concurrent article processing | `freshrss/reader.py` uses file locks and temporary-file replacement. Preserve duplicate-job prevention and atomic cache updates. |
 | Input-source events | Tern debounces changes and queues the latest requested state during a switch. Keep policy in Luau and macOS input operations in Swift. |
 | Failure handling | Follow each tool's current error contract. The music bridge clears unavailable playback state; playlist synchronization reports failed downloads and skips MPD refresh when unreachable. Do not hide failures with success-shaped fallbacks. |
 | Shared data | Weather mappings live in `omacosy/scripts/weather_lib.py`. MPD FIFO format/path must agree with `rmpc/config.ron`; playlists contain paths relative to the music library. |
@@ -70,7 +67,6 @@ Use concise Conventional Commit subjects such as `fix: ...` or `chore: ...`.
 | `nvim/init.lua`, `nvim/lua/plugins.lua`, `nvim/lazy-lock.json` | Load order, lazy.nvim plugin declarations, and pinned plugin versions. |
 | `omacosy/bar-items.conf`, `omacosy/scripts/` | Desktop-to-script contracts, including weather, AI usage, funds, and lyrics. |
 | `mpd/mpd.conf`, `mpd/playlist-sync`, `mpd/nowplaying/install.sh` | Music paths, playlist synchronization, and media-bridge deployment. |
-| `freshrss/compose.yaml`, `freshrss/reader.py` | News deployment and translation worker. |
 | `tern/plugins/input-source-policy/plugin.toml` | Tern plugin entry points; helper wrapper is under `scripts/`, native source under `src/`. |
 
 ## Runtime/Tooling Preferences

@@ -11,7 +11,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 CONFIG="$HOME/.config"
-MODULES=(beets btop fish freshrss gh git karabiner linearmouse mpd nvim omacosy rmpc tern tinycast yazi)
+MODULES=(beets btop fish gh git karabiner linearmouse mpd nvim omacosy rmpc tern tinycast yazi)
 BACKUP="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
 DRY=0 BREW=1 DESKTOP=1 NETWORK=1
 SELECTED=("${MODULES[@]}")

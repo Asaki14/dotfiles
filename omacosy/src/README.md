@@ -214,7 +214,6 @@ Your personal shell config belongs in `~/.zshrc.local`; the repo's
 | Music player look | `rmpc-theme-fragment` renders the desktop palette into `~/.config/rmpc/themes/omacosy.ron` and pushes it into running instances (`rmpc remote set theme`). Needs `theme: "omacosy"` in `~/.config/rmpc/config.ron`. Component and highlight colors follow the desktop. | `bin/rmpc-theme-fragment`, `config/rmpc/theme.ron.tmpl` |
 | File manager look | `yazi-theme-fragment` renders the desktop palette into the `omacosy` flavor and code-preview XML, then hot-reloads running instances. Needs `dark = "omacosy"` and `light = "omacosy"` under `[flavor]` in `~/.config/yazi/theme.toml`. Component and highlight colors follow the desktop. | `bin/yazi-theme-fragment`, `config/yazi/` |
 | Todo manager look | dooit uses the terminal's live background. Component and highlight colors follow `~/.config/omarchy/current/theme/colors.toml`, reloaded every second. Enable `from omacosy import follow_omacosy_theme` in `~/Library/Application Support/dooit/config.py`; `config/dooit/omacosy.py` is linked beside it. | `config/dooit/omacosy.py` |
-| News reader | FreshRSS runs locally and is available to the Mac and iPad through private Tailscale HTTPS. The Local Reader extension shares Chinese translations, cached images and responsive article typography. | `~/.config/freshrss/` |
 | Tern terminal colours | The `omacosy-theme` plugin applies the desktop palette with Clear material at all times. `tern-theme-fragment` regenerates `~/.omp/agent/themes/omacosy.json` and its native-agent CSS on desktop theme changes. Fonts, density, opacity, blur and layout stay unchanged. | `bin/tern-theme-fragment`, `config/tern/omp-theme.json.tmpl`, `config/tern/plugins/omacosy-theme/` |
 | Park/restore the stack | `omacosy-toggle` | `bin/omacosy-toggle` |
 | System glue | `omacosy-helper` (self-compiled) | `helper/main.swift` |
@@ -487,7 +486,7 @@ on re-runs and names such keyboards when it finds one connected.
 | `Super+space` | launcher (Raycast; the OmniWM option opens OmniWM's command palette instead) |
 | `Super+shift+f` | Lark (feishu). OmniWM keeps `Super+shift+f` for files: a NEW Finder window on every press |
 | `Super+shift+s` | music: the `music` tab running rmpc, in `TERMINAL` (`omacosy-tab`: Tern's own tabs, else herdr's) |
-| `Super+shift+n` | news: open FreshRSS in the browser (Tailscale must be connected) |
+| `Super+shift+n` | news: open NetNewsWire |
 | `Super+shift+a` | Agent: return to the `Agent` session in Tern, preserving its selected tab and block; never creates a session |
 | `Super+shift+d` | dooit: a tab titled `dooit …`, else a new `dooit` tab running dooit, in `TERMINAL` (`omacosy-tab`) |
 | `Super+shift+y` | yazi: a tab titled `yazi …`, else a new `yazi` tab running yazi, in `TERMINAL` (`omacosy-tab`) |
