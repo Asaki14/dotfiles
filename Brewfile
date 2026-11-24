@@ -27,3 +27,4 @@ brew "beets"           # beets
 cask "karabiner-elements" # karabiner
 cask "linearmouse"     # linearmouse
 cask "tinycast"        # tinycast
+cask "lap"             # photos
