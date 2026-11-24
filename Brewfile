@@ -19,13 +19,11 @@ brew "poppler"         # yazi
 brew "resvg"           # yazi
 brew "imagemagick"     # yazi
 brew "mpd"             # mpd
+brew "miniserve"       # photoup
 brew "yt-dlp"          # mpd fish
 brew "rmpc"            # rmpc
 brew "cava"            # rmpc
 brew "beets"           # beets
-brew "colima"          # immich
-brew "docker"          # immich
-brew "docker-compose"  # immich
 cask "karabiner-elements" # karabiner
 cask "linearmouse"     # linearmouse
 cask "tinycast"        # tinycast
