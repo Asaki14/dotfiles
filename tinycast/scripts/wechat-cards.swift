@@ -287,8 +287,7 @@ final class WeChat {
         _ = try wait("未在 e 码特输入框确认待发送消息；未生成卡片。") {
             let view = try snap()
             return view.isEMartChat && view.accountMenu == nil && view.hits.contains {
-                $0.text == message && $0.center.x > view.bounds.minX + 240 &&
-                    $0.center.x < view.bounds.midX && $0.center.y > view.bounds.maxY - 300
+                $0.text == message && $0.center.x > view.bounds.minX + 240 && $0.center.y > view.bounds.maxY - 300
             } ? true : nil
         }
         try key(36)
